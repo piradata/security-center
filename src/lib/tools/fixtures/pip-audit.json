@@ -1,0 +1,21 @@
+{
+  "dependencies": [
+    {
+      "name": "requests",
+      "version": "2.19.0",
+      "vulns": [
+        {
+          "id": "PYSEC-2018-28",
+          "fix_versions": ["2.20.0"],
+          "aliases": ["CVE-2018-18074"],
+          "description": "Credentials may be sent to an unintended host."
+        }
+      ]
+    },
+    {
+      "name": "safe-package",
+      "version": "1.0.0",
+      "vulns": []
+    }
+  ]
+}

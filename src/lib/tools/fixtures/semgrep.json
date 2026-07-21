@@ -1,0 +1,29 @@
+{
+  "version": "1.130.0",
+  "results": [
+    {
+      "check_id": "javascript.lang.security.audit.eval-detected.eval-detected",
+      "path": "./src/example.ts",
+      "start": {
+        "line": 4,
+        "col": 3,
+        "offset": 42
+      },
+      "end": {
+        "line": 4,
+        "col": 20,
+        "offset": 59
+      },
+      "extra": {
+        "message": "Detected use of eval().",
+        "severity": "ERROR",
+        "fingerprint": "engine-stable-fingerprint",
+        "metadata": {
+          "category": "security"
+        },
+        "lines": "eval(userInput)"
+      }
+    }
+  ],
+  "errors": []
+}

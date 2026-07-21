@@ -1,0 +1,1 @@
+ALTER TABLE "Issue" ADD COLUMN "regressionAt" TIMESTAMP(3);

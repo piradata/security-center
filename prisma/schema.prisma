@@ -1,0 +1,268 @@
+// Security Center V1 — domain model
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  admin
+  member
+}
+
+enum IssueStatus {
+  open
+  in_progress
+  resolved
+  absent
+  suppressed
+}
+
+enum IssueSeverity {
+  critical
+  high
+  medium
+  low
+  info
+}
+
+enum ScanStatus {
+  running
+  completed
+  failed
+}
+
+enum JobStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+enum JobType {
+  export_issues // maps to job type "export.issues"
+}
+
+enum ExportFormat {
+  csv
+  json
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  role          UserRole  @default(member)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts       Account[]
+  sessions       Session[]
+  assignedIssues Issue[]   @relation("IssueAssignee")
+}
+
+// Auth.js adapter models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Application {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  /// 0–100; app score = min(service scores)
+  score       Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  services       Service[]
+  qualityGates   QualityGate[]
+  appToolConfigs AppToolConfig[]
+}
+
+model Service {
+  id            String   @id @default(cuid())
+  applicationId String
+  name          String
+  slug          String
+  /// SHA-256 of CI bearer token (SC_TOKEN)
+  tokenHash     String?  @unique
+  /// 0–100 from open issues
+  score         Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  application        Application         @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  serviceToolConfigs ServiceToolConfig[]
+  scans              Scan[]
+  issues             Issue[]
+
+  @@unique([applicationId, slug])
+}
+
+model Tool {
+  id          String   @id @default(cuid())
+  /// Stable key: gitleaks, npm-audit, pip-audit, trivy, semgrep
+  key         String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  appToolConfigs     AppToolConfig[]
+  serviceToolConfigs ServiceToolConfig[]
+  issues             Issue[]
+}
+
+/// Application-level default enable/disable per tool
+model AppToolConfig {
+  id            String  @id @default(cuid())
+  applicationId String
+  toolId        String
+  enabled       Boolean @default(true)
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  tool        Tool        @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, toolId])
+}
+
+/// Service-level override (effective = app default ⊕ service override)
+model ServiceToolConfig {
+  id        String  @id @default(cuid())
+  serviceId String
+  toolId    String
+  enabled   Boolean
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  tool    Tool    @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, toolId])
+}
+
+model Scan {
+  id         String     @id @default(cuid())
+  serviceId  String
+  status     ScanStatus @default(running)
+  startedAt  DateTime   @default(now())
+  finishedAt DateTime?
+  passedGate Boolean?
+  score      Int?
+  metadata   Json?
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  issues  Issue[]
+}
+
+model Issue {
+  id             String        @id @default(cuid())
+  serviceId      String
+  toolId         String
+  scanId         String?
+  fingerprint    String
+  title          String
+  description    String?       @db.Text
+  severity       IssueSeverity
+  status         IssueStatus   @default(open)
+  assigneeUserId String?
+  raw            Json?
+  firstSeenAt    DateTime      @default(now())
+  lastSeenAt     DateTime      @default(now())
+  regressionAt   DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  service  Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  tool     Tool    @relation(fields: [toolId], references: [id], onDelete: Restrict)
+  scan     Scan?   @relation(fields: [scanId], references: [id], onDelete: SetNull)
+  assignee User?   @relation("IssueAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+
+  @@unique([serviceId, fingerprint])
+  @@index([status])
+  @@index([severity])
+  @@index([assigneeUserId])
+}
+
+model QualityGate {
+  id                    String   @id @default(cuid())
+  applicationId         String
+  name                  String   @default("default")
+  /// Fail when service/app score is below this (0–100)
+  scoreThreshold        Int?
+  failOnNewHighCritical Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, name])
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  type        JobType
+  status      JobStatus @default(pending)
+  payload     Json?
+  error       String?   @db.Text
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  availableAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  export Export?
+
+  @@index([status, type])
+}
+
+model Export {
+  id          String       @id @default(cuid())
+  jobId       String       @unique
+  format      ExportFormat
+  filePath    String
+  filename    String
+  contentType String
+  byteSize    Int
+  issueCount  Int
+  createdAt   DateTime     @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
