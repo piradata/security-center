@@ -2,9 +2,7 @@
   "name": "security-center",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "packageManager": "pnpm@11.13.0+sha512.88d94724d8f2e6c186744a5584c6e59ecac869ec7ba15e9cb4cd628e8dc7066820b2481d8ee3b51ea8da323a7378068aa58c556a3720d32b7c20a051d088363a",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -17,8 +15,8 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:validate": "prisma validate",
-    "worker": "npm run start -w @security-center/worker",
-    "worker:dev": "npm run dev -w @security-center/worker"
+    "worker": "pnpm --filter @security-center/worker start",
+    "worker:dev": "pnpm --filter @security-center/worker dev"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

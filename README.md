@@ -7,6 +7,7 @@
 | Layer | Choice |
 |-------|--------|
 | App | Next.js (App Router) + TypeScript |
+| Package manager | pnpm (Corepack-pinned in `package.json`) |
 | UI | Tailwind + shadcn/ui |
 | DB | PostgreSQL + Prisma |
 | Auth | Auth.js OIDC + bootstrap admin |
@@ -20,16 +21,34 @@ No host agent. No server-side clone/scan. Teams replace prior scanner steps with
 
 ## Quickstart
 
-### 1. Start with Docker Compose
+### 1. Package manager
+
+pnpm is pinned via Corepack in `package.json` (`packageManager`).
 
 ```bash
-cp .env.example .env   # when present; otherwise set the vars below
-docker compose up -d
+corepack enable
+pnpm install
 ```
 
-Typical services: app, Postgres, and the export worker.
+### 2. Start with Docker Compose (dev)
 
-### 2. Environment variables
+Compose bind-mounts the repo and uses the Dockerfile `dev` stage. Dependencies install into a shared `node_modules` volume (`pnpm install --frozen-lockfile`).
+
+```bash
+cp .env.example .env   # required — compose loads it via env_file for app + worker
+docker compose up --build
+```
+
+App: http://localhost:3000. Worker shares the same mount. Auth/OIDC come from `.env`; `DATABASE_URL` / `STORAGE_PATH` are overridden for the Compose network.
+
+Production image (no host `node_modules`):
+
+```bash
+docker build --target runner -t security-center:app .
+docker build --target worker -t security-center:worker .
+```
+
+### 3. Environment variables
 
 | Variable | Purpose |
 |----------|---------|
@@ -41,7 +60,7 @@ Typical services: app, Postgres, and the export worker.
 
 Exact names may match Auth.js conventions in the app config once scaffolded.
 
-### 3. One-curl CI snippet
+### 4. One-curl CI snippet
 
 In your pipeline (after checkout), set `SC_URL` and `SC_TOKEN`, then:
 

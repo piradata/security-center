@@ -1,0 +1,36 @@
+packages:
+  - "packages/*"
+overrides:
+  postcss: ">=8.5.10"
+allowBuilds:
+  '@prisma/engines': false
+  esbuild: false
+  prisma: false
+  sharp: false
+  unrs-resolver: false
+minimumReleaseAgeExclude:
+  - '@auth/core@0.41.3'
+  - '@auth/prisma-adapter@2.11.3'
+  - '@next/env@16.2.11'
+  - '@next/eslint-plugin-next@16.2.11'
+  - '@next/swc-darwin-arm64@16.2.11'
+  - '@next/swc-darwin-x64@16.2.11'
+  - '@next/swc-linux-arm64-gnu@16.2.11'
+  - '@next/swc-linux-arm64-musl@16.2.11'
+  - '@next/swc-linux-x64-gnu@16.2.11'
+  - '@next/swc-linux-x64-musl@16.2.11'
+  - '@next/swc-win32-arm64-msvc@16.2.11'
+  - '@next/swc-win32-x64-msvc@16.2.11'
+  - '@prisma/adapter-pg@7.9.0'
+  - '@prisma/client-runtime-utils@7.9.0'
+  - '@prisma/client@7.9.0'
+  - '@prisma/config@7.9.0'
+  - '@prisma/debug@7.9.0'
+  - '@prisma/driver-adapter-utils@7.9.0'
+  - '@prisma/engines@7.9.0'
+  - '@prisma/fetch-engine@7.9.0'
+  - '@prisma/get-platform@7.9.0'
+  - eslint-config-next@16.2.11
+  - next-auth@5.0.0-beta.32
+  - next@16.2.11
+  - prisma@7.9.0

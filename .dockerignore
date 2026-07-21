@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+.env
+.env.*
+!.env.example
+.next
+.git
+.gitignore
+data
+coverage
+*.md
+!README.md
+tmp-app
+.agents
+.claude
+Dockerfile*
+docker-compose*.yml

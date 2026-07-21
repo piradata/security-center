@@ -23,7 +23,7 @@ const providers: Provider[] = [];
 const oidc = oidcProvider();
 if (oidc) providers.push(oidc);
 
-/** Edge-safe Auth.js config (no Prisma) — used by middleware. */
+/** Edge-safe Auth.js config (no Prisma) — used by proxy. */
 export const authConfig = {
   providers,
   pages: { signIn: "/login" },

@@ -1,30 +1,43 @@
 # syntax=docker/dockerfile:1
 
-FROM node:22-bookworm-slim AS deps
+FROM node:22-bookworm-slim AS base
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable
 
-FROM node:22-bookworm-slim AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+# Dev platform — compose bind-mounts the repo; deps install into a volume.
+FROM base AS dev
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npx prisma generate && npm run build
+EXPOSE 3000
+CMD ["sh", "-c", "pnpm install --frozen-lockfile && pnpm exec prisma generate && pnpm exec prisma migrate deploy && pnpm exec prisma db seed && pnpm run dev --hostname 0.0.0.0 --port 3000"]
 
-FROM node:22-bookworm-slim AS runner
-WORKDIR /app
+# Full production build — never copies host node_modules; installs from the lockfile.
+FROM base AS build
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+COPY . .
+RUN pnpm install --frozen-lockfile \
+  && pnpm exec prisma generate \
+  && pnpm run build
+
+FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/src/generated ./src/generated
-COPY --from=builder /app/next.config.ts ./
+COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/.npmrc ./
+COPY --from=build /app/packages/worker/package.json ./packages/worker/
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./prisma.config.ts
+COPY --from=build /app/src/generated ./src/generated
+COPY --from=build /app/next.config.ts ./
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && npm run start"]
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm exec prisma db seed && pnpm run start"]
+
+FROM base AS worker
+ENV NODE_ENV=production
+ENV STORAGE_PATH=/data/exports
+COPY --from=build /app /app
+CMD ["pnpm", "--filter", "@security-center/worker", "start"]

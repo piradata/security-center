@@ -19,18 +19,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: dev
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://security:security@postgres:5432/security_center?schema=public
-      AUTH_SECRET: ${AUTH_SECRET:-dev-change-me-in-production}
-      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
-      AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER:-}
-      AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID:-}
-      AUTH_OIDC_CLIENT_SECRET: ${AUTH_OIDC_CLIENT_SECRET:-}
-      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}
       STORAGE_PATH: /data/exports
+      WATCHPACK_POLLING: "true"
     volumes:
+      - .:/app
+      - node_modules:/app/node_modules
       - export_data:/data/exports
     depends_on:
       postgres:
@@ -39,16 +39,30 @@ services:
   worker:
     build:
       context: .
-      dockerfile: packages/worker/Dockerfile
+      dockerfile: Dockerfile
+      target: dev
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://security:security@postgres:5432/security_center?schema=public
       STORAGE_PATH: /data/exports
     volumes:
+      - .:/app
+      - node_modules:/app/node_modules
       - export_data:/data/exports
+    command:
+      [
+        "sh",
+        "-c",
+        "while [ ! -d node_modules/next ]; do sleep 2; done; pnpm exec prisma generate && pnpm --filter @security-center/worker start",
+      ]
     depends_on:
       postgres:
         condition: service_healthy
+      app:
+        condition: service_started
 
 volumes:
   postgres_data:
   export_data:
+  node_modules:
