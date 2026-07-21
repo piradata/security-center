@@ -2,7 +2,14 @@ import type { NextAuthConfig } from "next-auth";
 import type { Provider } from "next-auth/providers";
 import type { UserRole } from "@/generated/prisma/enums";
 
+export function isDevAuth(): boolean {
+  return process.env.NODE_ENV === "development";
+}
+
 function oidcProvider(): Provider | null {
+  // ponytail: skip IdP in local/dev; Credentials provider lives in auth.ts
+  if (isDevAuth()) return null;
+
   const issuer = process.env.AUTH_OIDC_ISSUER;
   const clientId = process.env.AUTH_OIDC_CLIENT_ID;
   const clientSecret = process.env.AUTH_OIDC_CLIENT_SECRET;

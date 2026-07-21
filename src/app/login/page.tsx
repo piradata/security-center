@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/lib/auth";
+import { isDevAuth } from "@/lib/auth.config";
 
 export default async function LoginPage({
   searchParams,
@@ -10,8 +11,10 @@ export default async function LoginPage({
   if (session?.user) redirect("/dashboard");
 
   const params = await searchParams;
+  const dev = isDevAuth();
   const oidcConfigured = Boolean(
-    process.env.AUTH_OIDC_ISSUER &&
+    !dev &&
+      process.env.AUTH_OIDC_ISSUER &&
       process.env.AUTH_OIDC_CLIENT_ID &&
       process.env.AUTH_OIDC_CLIENT_SECRET,
   );
@@ -24,17 +27,34 @@ export default async function LoginPage({
             Security Center
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Sign in with your organization identity provider.
+            {dev
+              ? "Development mode — OIDC is skipped."
+              : "Sign in with your organization identity provider."}
           </p>
         </div>
 
         {params.error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-            Sign-in failed ({params.error}). Check OIDC configuration.
+            Sign-in failed ({params.error}).
+            {dev ? " Check AUTH_SECRET." : " Check OIDC configuration."}
           </p>
         ) : null}
 
-        {oidcConfigured ? (
+        {dev ? (
+          <form
+            action={async () => {
+              "use server";
+              await signIn("dev", { redirectTo: "/dashboard" });
+            }}
+          >
+            <button
+              type="submit"
+              className="w-full rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            >
+              Continue as developer
+            </button>
+          </form>
+        ) : oidcConfigured ? (
           <form
             action={async () => {
               "use server";
