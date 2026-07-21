@@ -1,0 +1,5 @@
+# Overrides for VS Code / Cursor Dev Containers.
+# Keeps the IDE attached; app CMD from the main compose would exit otherwise.
+services:
+  app:
+    command: sleep infinity

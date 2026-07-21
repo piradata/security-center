@@ -41,6 +41,12 @@ docker compose up --build
 
 App: http://localhost:3000. Worker shares the same mount. Auth/OIDC come from `.env`; `DATABASE_URL` / `STORAGE_PATH` are overridden for the Compose network.
 
+**Dev Container (VS Code / Cursor):** open the repo → “Reopen in Container”. That reuses this Compose stack (Postgres + worker), copies `.env` from `.env.example` if missing, installs deps, migrates, and seeds. Then in the container terminal:
+
+```bash
+pnpm run dev --hostname 0.0.0.0 --port 3000
+```
+
 Production image (no host `node_modules`):
 
 ```bash
