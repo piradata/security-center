@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { config as loadEnv } from "dotenv";
 import {
   ExportFormat,
   JobStatus,
@@ -16,8 +15,6 @@ import {
   retryStatus,
   serializeIssueExport,
 } from "@/lib/issue-export";
-
-loadEnv({ path: resolve(process.cwd(), ".env") });
 
 const POLL_MS = Math.max(100, Number(process.env.WORKER_POLL_MS) || 5000);
 const STORAGE_PATH =
