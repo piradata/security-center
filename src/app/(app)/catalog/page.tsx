@@ -290,6 +290,12 @@ export default async function CatalogPage() {
                               )}
                             </div>
                           </div>
+                          <div className="mt-3">
+                            <p className="text-xs font-medium">Pipeline command</p>
+                            <code className="mt-1 block overflow-x-auto rounded bg-white p-2 font-mono text-xs whitespace-pre dark:bg-black">
+                              {`curl -fsSL -H "Authorization: Bearer $SC_TOKEN" "$SC_URL/api/v1/ci/scan.sh" | bash`}
+                            </code>
+                          </div>
                         </div>
 
                         <div className="mt-4">

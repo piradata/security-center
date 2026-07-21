@@ -100,6 +100,182 @@ function severity(value: unknown, fallback: Severity = IssueSeverity.info) {
 
 const pythonExecutable = (toolsDir: string) => `${toolsDir}/python/bin/python`;
 
+export const gitleaksAdapter: ToolAdapter = {
+  key: "gitleaks",
+  detect(root = ".") {
+    return command([
+      "git",
+      "-C",
+      root,
+      "rev-parse",
+      "--is-inside-work-tree",
+    ]);
+  },
+  install(toolsDir = DEFAULT_TOOLS_DIR) {
+    return [
+      command(["mkdir", "-p", `${toolsDir}/bin`]),
+      command([
+        "sh",
+        "-c",
+        'set -eu; dir=$1; version=8.24.3; os=$(uname -s | tr "[:upper:]" "[:lower:]"); case $(uname -m) in x86_64|amd64) arch=x64 ;; arm64|aarch64) arch=arm64 ;; *) exit 2 ;; esac; case "$os" in linux|darwin) ;; *) exit 2 ;; esac; archive="$dir/gitleaks.tar.gz"; curl -fsSL -o "$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_${os}_${arch}.tar.gz"; tar -xzf "$archive" -C "$dir/bin" gitleaks; rm -f "$archive"',
+        "security-center-gitleaks-install",
+        toolsDir,
+      ]),
+    ];
+  },
+  run({
+    outputFile,
+    root = ".",
+    toolsDir = DEFAULT_TOOLS_DIR,
+  }: RunOptions) {
+    return command(
+      [
+        `${toolsDir}/bin/gitleaks`,
+        "git",
+        "--no-banner",
+        "--report-format",
+        "json",
+        "--report-path",
+        outputFile,
+        root,
+      ],
+      [0, 1],
+    );
+  },
+  normalize(rawJson) {
+    return array(parseJson(rawJson), "Gitleaks output").map((findingValue) => {
+      const finding = record(findingValue, "Gitleaks finding");
+      const ruleId = text(finding.RuleID);
+      const path = text(finding.File);
+      const startLine =
+        typeof finding.StartLine === "number" ? finding.StartLine : undefined;
+      if (!ruleId || !path || startLine === undefined) {
+        throw new TypeError("Gitleaks finding requires rule id, file, and line");
+      }
+      const engineFingerprint = text(finding.Fingerprint);
+      const secret = text(finding.Secret);
+      const match = text(finding.Match);
+      const sensitive = [secret, match].filter(
+        (value): value is string => Boolean(value),
+      );
+      const redact = (value: string | undefined) =>
+        sensitive.reduce(
+          (sanitized, secretValue) =>
+            sanitized?.replaceAll(secretValue, "[redacted]"),
+          value,
+        );
+      const safePath = redact(normalizedPath(path))!;
+
+      return {
+        fingerprint: fingerprint(
+          "gitleaks",
+          engineFingerprint ?? [ruleId, normalizedPath(path), startLine],
+        ),
+        title: `${redact(ruleId)} secret in ${safePath}`,
+        description: redact(text(finding.Description)),
+        severity: IssueSeverity.high,
+        raw: Object.fromEntries(
+          Object.entries({
+            ruleId: redact(ruleId),
+            file: safePath,
+            startLine,
+            endLine:
+              typeof finding.EndLine === "number" ? finding.EndLine : undefined,
+            startColumn:
+              typeof finding.StartColumn === "number"
+                ? finding.StartColumn
+                : undefined,
+            endColumn:
+              typeof finding.EndColumn === "number"
+                ? finding.EndColumn
+                : undefined,
+            fingerprint: redact(engineFingerprint),
+            tags: Array.isArray(finding.Tags)
+              ? finding.Tags.map((tag) =>
+                  typeof tag === "string" ? redact(tag) : tag,
+                )
+              : undefined,
+          }).filter(([, value]) => value !== undefined),
+        ),
+      };
+    });
+  },
+};
+
+export const npmAuditAdapter: ToolAdapter = {
+  key: "npm-audit",
+  // ponytail: root lockfile only; add workspace discovery if CI needs per-package audits.
+  detect(root = ".") {
+    return command(["test", "-f", `${root}/package-lock.json`]);
+  },
+  install() {
+    return [];
+  },
+  run({ outputFile, root = "." }: RunOptions) {
+    return command(
+      [
+        "sh",
+        "-c",
+        'cd "$1"; exec npm audit --json > "$2"',
+        "security-center-npm-audit-run",
+        root,
+        outputFile,
+      ],
+      [0, 1],
+    );
+  },
+  normalize(rawJson) {
+    const output = record(parseJson(rawJson), "npm audit output");
+    const vulnerabilities = record(
+      output.vulnerabilities ?? {},
+      "npm audit vulnerabilities",
+    );
+
+    return Object.entries(vulnerabilities).map(([key, vulnerabilityValue]) => {
+      const vulnerability = record(
+        vulnerabilityValue,
+        "npm audit vulnerability",
+      );
+      const name = text(vulnerability.name) ?? key;
+      const via = array(vulnerability.via ?? [], "npm audit vulnerability via");
+      const advisories = via.flatMap((value) =>
+        typeof value === "string"
+          ? [{ identity: value, title: value }]
+          : (() => {
+              const advisory = record(value, "npm audit advisory");
+              const identity =
+                advisory.source ?? advisory.url ?? advisory.name ?? advisory.title;
+              return identity === undefined
+                ? []
+                : [
+                    {
+                      identity,
+                      title: text(advisory.title) ?? text(advisory.name),
+                    },
+                  ];
+            })(),
+      );
+      const identities = advisories
+        .map(({ identity }) => identity)
+        .sort((a, b) => String(a).localeCompare(String(b)));
+      const title =
+        advisories.map((advisory) => advisory.title).find(Boolean) ??
+        `${name} vulnerability`;
+
+      return {
+        fingerprint: fingerprint("npm-audit", name, identities),
+        title,
+        description: advisories
+          .map((advisory) => advisory.title)
+          .filter((value): value is string => Boolean(value))
+          .join("; ") || undefined,
+        severity: severity(vulnerability.severity, IssueSeverity.medium),
+        raw: vulnerability,
+      };
+    });
+  },
+};
+
 export const pipAuditAdapter: ToolAdapter = {
   key: "pip-audit",
   // ponytail: root metadata only; add manifest discovery if monorepos need it.
@@ -414,6 +590,8 @@ export function createToolRegistry(adapters: readonly ToolAdapter[]) {
 }
 
 export const toolRegistry = createToolRegistry([
+  gitleaksAdapter,
+  npmAuditAdapter,
   pipAuditAdapter,
   trivyAdapter,
   semgrepAdapter,
