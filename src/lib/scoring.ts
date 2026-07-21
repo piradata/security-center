@@ -1,10 +1,10 @@
+import type { Prisma } from "@/generated/prisma/client";
 import {
   IssueSeverity,
   IssueStatus,
   type IssueSeverity as Severity,
   type IssueStatus as Status,
 } from "@/generated/prisma/enums";
-import type { Prisma } from "@/generated/prisma/client";
 
 export const SEVERITY_WEIGHTS = {
   [IssueSeverity.critical]: 40,

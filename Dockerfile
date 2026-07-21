@@ -25,7 +25,6 @@ FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/.npmrc ./
-COPY --from=build /app/packages/worker/package.json ./packages/worker/
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
@@ -39,5 +38,10 @@ CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm exec prisma db seed &&
 FROM base AS worker
 ENV NODE_ENV=production
 ENV STORAGE_PATH=/data/exports
-COPY --from=build /app /app
-CMD ["pnpm", "--filter", "@security-center/worker", "start"]
+COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/.npmrc ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/tsconfig.json ./
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./
+COPY --from=build /app/src ./src
+CMD ["pnpm", "run", "worker"]

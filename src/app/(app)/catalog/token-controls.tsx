@@ -22,7 +22,11 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
 function TokenResult({
   state,
 }: {
-  state: { token: string | null; serviceName: string | null; error: string | null };
+  state: {
+    token: string | null;
+    serviceName: string | null;
+    error: string | null;
+  };
 }) {
   if (state.error) {
     return (
@@ -47,11 +51,18 @@ function TokenResult({
   );
 }
 
-export function CreateServiceForm({ applicationId }: { applicationId: string }) {
+export function CreateServiceForm({
+  applicationId,
+}: {
+  applicationId: string;
+}) {
   const [state, action] = useActionState(createService, INITIAL_STATE);
 
   return (
-    <form action={action} className="mt-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
+    <form
+      action={action}
+      className="mt-4 rounded-md border border-zinc-200 p-4 dark:border-zinc-800"
+    >
       <input type="hidden" name="applicationId" value={applicationId} />
       <h4 className="font-medium">Add service</h4>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">

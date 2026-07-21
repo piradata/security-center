@@ -16,7 +16,9 @@ function gateData(formData: FormData) {
   const scoreThreshold = rawThreshold === "" ? null : Number(rawThreshold);
   if (
     scoreThreshold !== null &&
-    (!Number.isInteger(scoreThreshold) || scoreThreshold < 0 || scoreThreshold > 100)
+    (!Number.isInteger(scoreThreshold) ||
+      scoreThreshold < 0 ||
+      scoreThreshold > 100)
   ) {
     throw new Error("Score threshold must be a whole number from 0 to 100");
   }

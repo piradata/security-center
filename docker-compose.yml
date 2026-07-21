@@ -54,7 +54,7 @@ services:
       [
         "sh",
         "-c",
-        "while [ ! -d node_modules/next ]; do sleep 2; done; pnpm exec prisma generate && pnpm --filter @security-center/worker start",
+        "while [ ! -d node_modules/next ]; do sleep 2; done; pnpm exec prisma generate && pnpm run worker",
       ]
     depends_on:
       postgres:

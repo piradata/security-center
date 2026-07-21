@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { createQualityGate, deleteQualityGate, updateQualityGate } from "./actions";
+import {
+  createQualityGate,
+  deleteQualityGate,
+  updateQualityGate,
+} from "./actions";
 
 const input =
   "w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700";
@@ -14,7 +18,10 @@ export default async function GatesPage() {
   const applications = await prisma.application.findMany({
     orderBy: { name: "asc" },
     include: {
-      services: { orderBy: { name: "asc" }, select: { id: true, name: true, score: true } },
+      services: {
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, score: true },
+      },
       qualityGates: { orderBy: { name: "asc" } },
     },
   });
@@ -23,8 +30,8 @@ export default async function GatesPage() {
     <div className="mx-auto max-w-5xl">
       <h1 className="text-2xl font-semibold tracking-tight">Gates</h1>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        Application scores are the lowest available service score. Configure one or
-        more named policies per application.
+        Application scores are the lowest available service score. Configure one
+        or more named policies per application.
       </p>
 
       <div className="mt-6 space-y-6">
@@ -49,7 +56,10 @@ export default async function GatesPage() {
               </div>
 
               {application.services.length > 0 && (
-                <ul className="mt-4 flex flex-wrap gap-2" aria-label="Service scores">
+                <ul
+                  className="mt-4 flex flex-wrap gap-2"
+                  aria-label="Service scores"
+                >
                   {application.services.map((service) => (
                     <li
                       key={service.id}
@@ -95,7 +105,9 @@ export default async function GatesPage() {
                           />
                         </label>
                         <label className="text-sm">
-                          <span className="mb-1 block font-medium">Minimum score</span>
+                          <span className="mb-1 block font-medium">
+                            Minimum score
+                          </span>
                           <input
                             type="number"
                             min={0}
@@ -122,7 +134,10 @@ export default async function GatesPage() {
                           </button>
                         </div>
                       </form>
-                      <form action={deleteQualityGate.bind(null, gate.id)} className="mt-2">
+                      <form
+                        action={deleteQualityGate.bind(null, gate.id)}
+                        className="mt-2"
+                      >
                         <button
                           type="submit"
                           className="text-sm font-medium text-red-700 hover:underline dark:text-red-400"
@@ -136,18 +151,31 @@ export default async function GatesPage() {
               </div>
 
               <details className="mt-4">
-                <summary className="cursor-pointer text-sm font-medium">Add quality gate</summary>
+                <summary className="cursor-pointer text-sm font-medium">
+                  Add quality gate
+                </summary>
                 <form
                   action={createQualityGate}
                   className="mt-3 grid gap-3 rounded-md border border-zinc-200 p-4 md:grid-cols-3 dark:border-zinc-800"
                 >
-                  <input type="hidden" name="applicationId" value={application.id} />
+                  <input
+                    type="hidden"
+                    name="applicationId"
+                    value={application.id}
+                  />
                   <label className="text-sm">
                     <span className="mb-1 block font-medium">Name</span>
-                    <input required maxLength={80} name="name" className={input} />
+                    <input
+                      required
+                      maxLength={80}
+                      name="name"
+                      className={input}
+                    />
                   </label>
                   <label className="text-sm">
-                    <span className="mb-1 block font-medium">Minimum score</span>
+                    <span className="mb-1 block font-medium">
+                      Minimum score
+                    </span>
                     <input
                       type="number"
                       min={0}

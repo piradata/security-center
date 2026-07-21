@@ -1,10 +1,7 @@
-import { Prisma, IssueStatus } from "@/generated/prisma/client";
+import { IssueStatus, Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { buildReconciliationPlan, type Finding } from "@/lib/reconcile-state";
 import { refreshScores } from "@/lib/scoring";
-import {
-  buildReconciliationPlan,
-  type Finding,
-} from "@/lib/reconcile-state";
 
 type ReconcileToolResult = {
   serviceId: string;

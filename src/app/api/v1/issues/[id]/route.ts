@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Prisma, IssueStatus } from "@/generated/prisma/client";
+import { IssueStatus, type Prisma } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { refreshScores } from "@/lib/scoring";
@@ -58,7 +58,10 @@ export async function PATCH(request: Request, { params }: Context) {
     assigneeUserId !== null &&
     typeof assigneeUserId !== "string"
   ) {
-    return NextResponse.json({ error: "Invalid assigneeUserId" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid assigneeUserId" },
+      { status: 400 },
+    );
   }
   if (status === undefined && !hasAssignee) {
     return NextResponse.json({ error: "No changes supplied" }, { status: 400 });

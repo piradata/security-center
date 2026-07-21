@@ -1,8 +1,5 @@
 import { ScanStatus } from "@/generated/prisma/client";
-import {
-  parseIngestPayload,
-  readBoundedJson,
-} from "@/lib/ci/pipeline";
+import { parseIngestPayload, readBoundedJson } from "@/lib/ci/pipeline";
 import { prisma } from "@/lib/db";
 import { reconcileToolResult } from "@/lib/reconcile";
 import { authenticateServiceBearer } from "@/lib/service-token";

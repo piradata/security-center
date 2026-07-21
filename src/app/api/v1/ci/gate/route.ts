@@ -1,7 +1,7 @@
 import {
   IssueSeverity,
   IssueStatus,
-  Prisma,
+  type Prisma,
   ScanStatus,
 } from "@/generated/prisma/client";
 import { evaluateGate } from "@/lib/ci/pipeline";
@@ -44,8 +44,7 @@ export async function GET(request: Request) {
         failOnNewHighCritical: true,
       },
     });
-    const gate =
-      configuredGates.find(({ name }) => name === "default") ??
+    const gate = configuredGates.find(({ name }) => name === "default") ??
       configuredGates[0] ?? {
         name: "default",
         scoreThreshold: null,

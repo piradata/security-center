@@ -20,7 +20,9 @@ export default async function LoginPage({
     <div className="flex min-h-full flex-1 items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Security Center</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Security Center
+          </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Sign in with your organization identity provider.
           </p>
@@ -48,8 +50,8 @@ export default async function LoginPage({
           </form>
         ) : (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-            OIDC is not configured. Set AUTH_OIDC_ISSUER, AUTH_OIDC_CLIENT_ID, and
-            AUTH_OIDC_CLIENT_SECRET.
+            OIDC is not configured. Set AUTH_OIDC_ISSUER, AUTH_OIDC_CLIENT_ID,
+            and AUTH_OIDC_CLIENT_SECRET.
           </p>
         )}
       </div>

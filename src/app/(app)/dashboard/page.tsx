@@ -125,7 +125,9 @@ export default async function DashboardPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">Application and service scores</h2>
+        <h2 className="text-lg font-semibold">
+          Application and service scores
+        </h2>
         <div className="mt-3 grid gap-4 lg:grid-cols-2">
           {scores.map((application) => (
             <article
@@ -159,9 +161,7 @@ export default async function DashboardPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">
-          Recent High/Critical changes
-        </h2>
+        <h2 className="text-lg font-semibold">Recent High/Critical changes</h2>
         <div className="mt-3 divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
           {recent.map((issue) => (
             <Link

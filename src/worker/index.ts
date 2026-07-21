@@ -1,29 +1,27 @@
-import { config as loadEnv } from "dotenv";
+import { randomUUID } from "node:crypto";
 import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { randomUUID } from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { config as loadEnv } from "dotenv";
 import {
   ExportFormat,
   JobStatus,
-  Prisma,
+  type Prisma,
   PrismaClient,
-} from "../../../src/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+} from "@/generated/prisma/client";
 import {
   exportFilename,
   parseIssueExportPayload,
   resolveExportPath,
   retryStatus,
   serializeIssueExport,
-} from "../../../src/lib/issue-export";
+} from "@/lib/issue-export";
 
-// Load root .env when running from packages/worker
-const rootDir = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
-loadEnv({ path: resolve(rootDir, ".env") });
+loadEnv({ path: resolve(process.cwd(), ".env") });
 
 const POLL_MS = Math.max(100, Number(process.env.WORKER_POLL_MS) || 5000);
-const STORAGE_PATH = process.env.STORAGE_PATH ?? resolve(rootDir, "data/exports");
+const STORAGE_PATH =
+  process.env.STORAGE_PATH ?? resolve(process.cwd(), "data/exports");
 
 type ClaimedJob = {
   id: string;
@@ -40,7 +38,9 @@ function createPrisma() {
   });
 }
 
-async function claimExportJob(prisma: PrismaClient): Promise<ClaimedJob | null> {
+async function claimExportJob(
+  prisma: PrismaClient,
+): Promise<ClaimedJob | null> {
   const jobs = await prisma.$queryRaw<ClaimedJob[]>`
     WITH next_job AS (
       SELECT id
@@ -69,7 +69,11 @@ async function writeAtomically(filePath: string, contents: string) {
   await mkdir(dirname(filePath), { recursive: true });
   const temporary = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    await writeFile(temporary, contents, { encoding: "utf8", flag: "wx", mode: 0o600 });
+    await writeFile(temporary, contents, {
+      encoding: "utf8",
+      flag: "wx",
+      mode: 0o600,
+    });
     await rename(temporary, filePath);
   } catch (error) {
     await unlink(temporary).catch(() => undefined);
@@ -160,7 +164,11 @@ async function completeExport(prisma: PrismaClient, job: ClaimedJob) {
     }),
     prisma.job.update({
       where: { id: job.id },
-      data: { status: JobStatus.completed, completedAt: new Date(), error: null },
+      data: {
+        status: JobStatus.completed,
+        completedAt: new Date(),
+        error: null,
+      },
     }),
   ]);
 }
@@ -172,11 +180,16 @@ async function failJob(prisma: PrismaClient, job: ClaimedJob, error: unknown) {
     where: { id: job.id, status: JobStatus.running, attempts: job.attempts },
     data: {
       status,
-      error: String(error instanceof Error ? error.message : error).slice(0, 4000),
+      error: String(error instanceof Error ? error.message : error).slice(
+        0,
+        4000,
+      ),
       startedAt: status === JobStatus.pending ? null : undefined,
       completedAt: status === JobStatus.failed ? new Date() : null,
       availableAt:
-        status === JobStatus.pending ? new Date(Date.now() + retryDelayMs) : undefined,
+        status === JobStatus.pending
+          ? new Date(Date.now() + retryDelayMs)
+          : undefined,
     },
   });
 }

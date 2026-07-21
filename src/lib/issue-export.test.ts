@@ -3,10 +3,10 @@ import { test } from "node:test";
 import {
   csvEscape,
   exportFilename,
+  type IssueExportRow,
   resolveExportPath,
   retryStatus,
   serializeIssueExport,
-  type IssueExportRow,
 } from "./issue-export";
 
 const row: IssueExportRow = {

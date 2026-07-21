@@ -11,7 +11,7 @@
 | UI | Tailwind + shadcn/ui |
 | DB | PostgreSQL + Prisma |
 | Auth | Auth.js OIDC + bootstrap admin |
-| Worker | `packages/worker` — export jobs only |
+| Worker | `src/worker` — export jobs only |
 | Jobs | Postgres `FOR UPDATE SKIP LOCKED` (no Redis in V1) |
 | CI | One `curl \| bash` → `GET /api/v1/ci/scan.sh` with `SC_TOKEN` |
 

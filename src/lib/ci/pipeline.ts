@@ -4,8 +4,8 @@ import {
 } from "@/generated/prisma/enums";
 import {
   quoteShellArgument,
-  toolRegistry,
   type ToolCommand,
+  toolRegistry,
 } from "@/lib/tools";
 
 const SCAN_ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -65,10 +65,7 @@ export function parseIngestPayload(value: unknown) {
 
 export async function readBoundedJson(request: Request, maxBytes: number) {
   const declaredLength = Number(request.headers.get("content-length"));
-  if (
-    Number.isFinite(declaredLength) &&
-    declaredLength > maxBytes
-  ) {
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
     throw new TypeError("Request body is too large");
   }
   if (!request.body) throw new TypeError("Request body is required");
@@ -93,7 +90,9 @@ export async function readBoundedJson(request: Request, maxBytes: number) {
     offset += chunk.byteLength;
   }
   try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
+    return JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+    ) as unknown;
   } catch {
     throw new TypeError("Request body must be valid UTF-8 JSON");
   }

@@ -22,7 +22,11 @@ function text(formData: FormData, key: string, max = 120): string {
   return value;
 }
 
-function optionalText(formData: FormData, key: string, max = 500): string | null {
+function optionalText(
+  formData: FormData,
+  key: string,
+  max = 500,
+): string | null {
   const value = String(formData.get(key) ?? "").trim();
   if (value.length > max) throw new Error(`${key} is too long`);
   return value || null;
@@ -31,7 +35,9 @@ function optionalText(formData: FormData, key: string, max = 500): string | null
 function slug(formData: FormData): string {
   const value = text(formData, "slug", 80).toLowerCase();
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
-    throw new Error("slug must contain lowercase letters, numbers, and single hyphens");
+    throw new Error(
+      "slug must contain lowercase letters, numbers, and single hyphens",
+    );
   }
   return value;
 }
@@ -55,7 +61,10 @@ export async function createApplication(formData: FormData) {
   revalidatePath("/gates");
 }
 
-export async function updateApplication(applicationId: string, formData: FormData) {
+export async function updateApplication(
+  applicationId: string,
+  formData: FormData,
+) {
   await requireUser();
   await prisma.application.update({
     where: { id: applicationId },
@@ -99,7 +108,8 @@ export async function createService(
     return {
       token: null,
       serviceName: null,
-      error: "Could not create service. Check that its slug is unique in this application.",
+      error:
+        "Could not create service. Check that its slug is unique in this application.",
     };
   }
 }
@@ -153,7 +163,8 @@ export async function updateApplicationTool(
 ) {
   await requireUser();
   const value = text(formData, "enabled");
-  if (value !== "true" && value !== "false") throw new Error("Invalid tool setting");
+  if (value !== "true" && value !== "false")
+    throw new Error("Invalid tool setting");
   const enabled = value === "true";
   await prisma.appToolConfig.upsert({
     where: { applicationId_toolId: { applicationId, toolId } },

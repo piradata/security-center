@@ -51,13 +51,17 @@ export default async function CatalogPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Catalog</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Manage applications, services, pipeline tokens, and effective tool settings.
+          Manage applications, services, pipeline tokens, and effective tool
+          settings.
         </p>
       </div>
 
       <section className="mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
         <h2 className="text-lg font-semibold">Add application</h2>
-        <form action={createApplication} className="mt-4 grid gap-3 md:grid-cols-2">
+        <form
+          action={createApplication}
+          className="mt-4 grid gap-3 md:grid-cols-2"
+        >
           <label className="text-sm">
             <span className="mb-1 block font-medium">Name</span>
             <input required maxLength={120} name="name" className={input} />
@@ -74,7 +78,12 @@ export default async function CatalogPage() {
           </label>
           <label className="text-sm md:col-span-2">
             <span className="mb-1 block font-medium">Description</span>
-            <textarea maxLength={500} name="description" rows={2} className={input} />
+            <textarea
+              maxLength={500}
+              name="description"
+              rows={2}
+              className={input}
+            />
           </label>
           <div className="md:col-span-2">
             <button
@@ -96,7 +105,10 @@ export default async function CatalogPage() {
 
         {applications.map((application) => {
           const appDefaults = new Map(
-            application.appToolConfigs.map((config) => [config.toolId, config.enabled]),
+            application.appToolConfigs.map((config) => [
+              config.toolId,
+              config.enabled,
+            ]),
           );
           return (
             <section
@@ -117,7 +129,9 @@ export default async function CatalogPage() {
               </div>
 
               <details className="mt-4">
-                <summary className="cursor-pointer text-sm font-medium">Edit application</summary>
+                <summary className="cursor-pointer text-sm font-medium">
+                  Edit application
+                </summary>
                 <form
                   action={updateApplication.bind(null, application.id)}
                   className="mt-3 grid gap-3 md:grid-cols-2"
@@ -159,7 +173,10 @@ export default async function CatalogPage() {
                     </button>
                   </div>
                 </form>
-                <form action={deleteApplication.bind(null, application.id)} className="mt-3">
+                <form
+                  action={deleteApplication.bind(null, application.id)}
+                  className="mt-3"
+                >
                   <button type="submit" className={dangerButton}>
                     Delete application and all services
                   </button>
@@ -169,20 +186,29 @@ export default async function CatalogPage() {
               <div className="mt-6">
                 <h3 className="font-semibold">Application tool defaults</h3>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Services inherit these settings unless they define an override.
+                  Services inherit these settings unless they define an
+                  override.
                 </p>
                 <div className="mt-3 grid gap-2 lg:grid-cols-2">
                   {tools.map((tool) => (
                     <form
                       key={tool.id}
-                      action={updateApplicationTool.bind(null, application.id, tool.id)}
+                      action={updateApplicationTool.bind(
+                        null,
+                        application.id,
+                        tool.id,
+                      )}
                       className="flex items-end gap-2 rounded-md bg-zinc-50 p-3 dark:bg-zinc-900"
                     >
                       <label className="min-w-0 flex-1 text-sm">
-                        <span className="mb-1 block font-medium">{tool.name}</span>
+                        <span className="mb-1 block font-medium">
+                          {tool.name}
+                        </span>
                         <select
                           name="enabled"
-                          defaultValue={String(appDefaults.get(tool.id) ?? true)}
+                          defaultValue={String(
+                            appDefaults.get(tool.id) ?? true,
+                          )}
                           className={input}
                         >
                           <option value="true">Enabled</option>
@@ -221,7 +247,9 @@ export default async function CatalogPage() {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div>
                             <h4 className="font-semibold">{service.name}</h4>
-                            <p className="text-xs text-zinc-500">/{service.slug}</p>
+                            <p className="text-xs text-zinc-500">
+                              /{service.slug}
+                            </p>
                           </div>
                           <Score value={service.score} />
                         </div>
@@ -235,7 +263,9 @@ export default async function CatalogPage() {
                             className="mt-3 grid gap-3 sm:grid-cols-2"
                           >
                             <label className="text-sm">
-                              <span className="mb-1 block font-medium">Name</span>
+                              <span className="mb-1 block font-medium">
+                                Name
+                              </span>
                               <input
                                 required
                                 maxLength={120}
@@ -245,7 +275,9 @@ export default async function CatalogPage() {
                               />
                             </label>
                             <label className="text-sm">
-                              <span className="mb-1 block font-medium">Slug</span>
+                              <span className="mb-1 block font-medium">
+                                Slug
+                              </span>
                               <input
                                 required
                                 maxLength={80}
@@ -261,7 +293,10 @@ export default async function CatalogPage() {
                               </button>
                             </div>
                           </form>
-                          <form action={deleteService.bind(null, service.id)} className="mt-3">
+                          <form
+                            action={deleteService.bind(null, service.id)}
+                            className="mt-3"
+                          >
                             <button type="submit" className={dangerButton}>
                               Delete service
                             </button>
@@ -271,9 +306,13 @@ export default async function CatalogPage() {
                         <div className="mt-4 rounded-md bg-zinc-50 p-3 dark:bg-zinc-900">
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <h5 className="text-sm font-medium">CI service token</h5>
+                              <h5 className="text-sm font-medium">
+                                CI service token
+                              </h5>
                               <p className="text-xs text-zinc-500">
-                                {service.tokenHash ? "Active" : "No active token"}
+                                {service.tokenHash
+                                  ? "Active"
+                                  : "No active token"}
                               </p>
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -282,8 +321,16 @@ export default async function CatalogPage() {
                                 hasToken={Boolean(service.tokenHash)}
                               />
                               {service.tokenHash && (
-                                <form action={revokeServiceToken.bind(null, service.id)}>
-                                  <button type="submit" className={dangerButton}>
+                                <form
+                                  action={revokeServiceToken.bind(
+                                    null,
+                                    service.id,
+                                  )}
+                                >
+                                  <button
+                                    type="submit"
+                                    className={dangerButton}
+                                  >
                                     Revoke token
                                   </button>
                                 </form>
@@ -291,7 +338,9 @@ export default async function CatalogPage() {
                             </div>
                           </div>
                           <div className="mt-3">
-                            <p className="text-xs font-medium">Pipeline command</p>
+                            <p className="text-xs font-medium">
+                              Pipeline command
+                            </p>
                             <code className="mt-1 block overflow-x-auto rounded bg-white p-2 font-mono text-xs whitespace-pre dark:bg-black">
                               {`curl -fsSL -H "Authorization: Bearer $SC_TOKEN" "$SC_URL/api/v1/ci/scan.sh" | bash`}
                             </code>
@@ -299,12 +348,18 @@ export default async function CatalogPage() {
                         </div>
 
                         <div className="mt-4">
-                          <h5 className="text-sm font-medium">Tool overrides</h5>
+                          <h5 className="text-sm font-medium">
+                            Tool overrides
+                          </h5>
                           <div className="mt-2 grid gap-2 lg:grid-cols-2">
                             {effective.map((tool) => (
                               <form
                                 key={tool.id}
-                                action={updateServiceTool.bind(null, service.id, tool.id)}
+                                action={updateServiceTool.bind(
+                                  null,
+                                  service.id,
+                                  tool.id,
+                                )}
                                 className="flex items-end gap-2"
                               >
                                 <label className="min-w-0 flex-1 text-sm">
@@ -323,12 +378,21 @@ export default async function CatalogPage() {
                                     }
                                     className={input}
                                   >
-                                    <option value="inherit">Inherit application default</option>
-                                    <option value="true">Enabled override</option>
-                                    <option value="false">Disabled override</option>
+                                    <option value="inherit">
+                                      Inherit application default
+                                    </option>
+                                    <option value="true">
+                                      Enabled override
+                                    </option>
+                                    <option value="false">
+                                      Disabled override
+                                    </option>
                                   </select>
                                 </label>
-                                <button type="submit" className={secondaryButton}>
+                                <button
+                                  type="submit"
+                                  className={secondaryButton}
+                                >
                                   Save
                                 </button>
                               </form>

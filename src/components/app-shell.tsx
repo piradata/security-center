@@ -20,7 +20,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-full flex-1">
       <aside className="flex w-56 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="border-b border-zinc-200 px-4 py-5 dark:border-zinc-800">
-          <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
+          <Link
+            href="/dashboard"
+            className="text-lg font-semibold tracking-tight"
+          >
             Security Center
           </Link>
           <p className="mt-0.5 text-xs text-zinc-500">ASPM-lite</p>

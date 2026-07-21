@@ -1,9 +1,9 @@
 import { isAbsolute, relative, resolve } from "node:path";
 import {
   ExportFormat,
+  type ExportFormat as Format,
   IssueSeverity,
   IssueStatus,
-  type ExportFormat as Format,
   type IssueSeverity as Severity,
   type IssueStatus as Status,
 } from "../generated/prisma/enums";
@@ -79,7 +79,9 @@ export function parseIssueExportPayload(value: unknown): IssueExportPayload {
   }
 
   if (rawFilters.severity !== undefined) {
-    if (!Object.values(IssueSeverity).includes(rawFilters.severity as Severity)) {
+    if (
+      !Object.values(IssueSeverity).includes(rawFilters.severity as Severity)
+    ) {
       throw new Error("Invalid severity filter");
     }
     filters.severity = rawFilters.severity as Severity;
@@ -115,14 +117,17 @@ export function serializeIssueExport(
     firstSeenAt: row.firstSeenAt.toISOString(),
     lastSeenAt: row.lastSeenAt.toISOString(),
   }));
-  if (format === ExportFormat.json) return `${JSON.stringify(records, null, 2)}\n`;
+  if (format === ExportFormat.json)
+    return `${JSON.stringify(records, null, 2)}\n`;
 
-  return [
-    CSV_COLUMNS.join(","),
-    ...records.map((row) =>
-      CSV_COLUMNS.map((column) => csvEscape(row[column])).join(","),
-    ),
-  ].join("\r\n") + "\r\n";
+  return (
+    [
+      CSV_COLUMNS.join(","),
+      ...records.map((row) =>
+        CSV_COLUMNS.map((column) => csvEscape(row[column])).join(","),
+      ),
+    ].join("\r\n") + "\r\n"
+  );
 }
 
 export function exportFilename(jobId: string, format: Format): string {
@@ -130,14 +135,21 @@ export function exportFilename(jobId: string, format: Format): string {
   return `issues-${jobId}.${format}`;
 }
 
-export function resolveExportPath(storagePath: string, filename: string): string {
+export function resolveExportPath(
+  storagePath: string,
+  filename: string,
+): string {
   if (!/^issues-[A-Za-z0-9_-]+\.(csv|json)$/.test(filename)) {
     throw new Error("Invalid export filename");
   }
   const root = resolve(storagePath);
   const file = resolve(root, filename);
   const pathFromRoot = relative(root, file);
-  if (!pathFromRoot || pathFromRoot.startsWith("..") || isAbsolute(pathFromRoot)) {
+  if (
+    !pathFromRoot ||
+    pathFromRoot.startsWith("..") ||
+    isAbsolute(pathFromRoot)
+  ) {
     throw new Error("Export path escapes storage");
   }
   return file;

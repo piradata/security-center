@@ -1,6 +1,6 @@
 import {
-  IssueStatus,
   type IssueSeverity,
+  IssueStatus,
   type IssueStatus as Status,
 } from "@/generated/prisma/enums";
 
@@ -26,7 +26,9 @@ export function buildReconciliationPlan(
   seenAt: Date,
 ) {
   const scoped = existing.filter((issue) => issue.toolId === toolId);
-  const byFingerprint = new Map(existing.map((issue) => [issue.fingerprint, issue]));
+  const byFingerprint = new Map(
+    existing.map((issue) => [issue.fingerprint, issue]),
+  );
   const uniqueFindings = new Map<string, Finding>();
 
   for (const finding of findings) {
@@ -45,7 +47,9 @@ export function buildReconciliationPlan(
     return {
       issueId: issue?.id,
       finding,
-      status: regressed ? IssueStatus.open : issue?.status ?? IssueStatus.open,
+      status: regressed
+        ? IssueStatus.open
+        : (issue?.status ?? IssueStatus.open),
       regressionAt: regressed ? seenAt : undefined,
     };
   });

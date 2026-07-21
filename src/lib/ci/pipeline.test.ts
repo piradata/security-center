@@ -25,7 +25,10 @@ test("validates probes and filters plans to available registered enabled tools",
     ),
     ["gitleaks"],
   );
-  assert.throws(() => parseProbe({ availableTools: "gitleaks" }), /availableTools/);
+  assert.throws(
+    () => parseProbe({ availableTools: "gitleaks" }),
+    /availableTools/,
+  );
   assert.throws(
     () => parseProbe({ availableTools: Array(51).fill("gitleaks") }),
     /availableTools/,
@@ -37,31 +40,26 @@ test("validates bounded ingest identities before scanner normalization", () => {
     parseIngestPayload({ scanId: "scan_1", tool: "npm-audit", result: {} }),
     { scanId: "scan_1", tool: "npm-audit", result: {} },
   );
-  assert.throws(() => parseIngestPayload({ tool: "../command", result: {} }), /tool/);
+  assert.throws(
+    () => parseIngestPayload({ tool: "../command", result: {} }),
+    /tool/,
+  );
   assert.throws(() => parseIngestPayload({ tool: "npm-audit" }), /result/);
 });
 
 test("gate fails only threshold breaches and current new or reopened high findings", () => {
   assert.deepEqual(
-    evaluateGate(
-      { scoreThreshold: 80, failOnNewHighCritical: true },
-      79,
-      [
-        { severity: IssueSeverity.high, isNewOrReopened: false },
-        { severity: IssueSeverity.medium, isNewOrReopened: true },
-      ],
-    ),
+    evaluateGate({ scoreThreshold: 80, failOnNewHighCritical: true }, 79, [
+      { severity: IssueSeverity.high, isNewOrReopened: false },
+      { severity: IssueSeverity.medium, isNewOrReopened: true },
+    ]),
     { passed: false, newHighCritical: 0, reasons: ["Score 79 is below 80"] },
   );
   assert.deepEqual(
-    evaluateGate(
-      { scoreThreshold: 80, failOnNewHighCritical: true },
-      100,
-      [
-        { severity: IssueSeverity.critical, isNewOrReopened: true },
-        { severity: IssueSeverity.high, isNewOrReopened: true },
-      ],
-    ),
+    evaluateGate({ scoreThreshold: 80, failOnNewHighCritical: true }, 100, [
+      { severity: IssueSeverity.critical, isNewOrReopened: true },
+      { severity: IssueSeverity.high, isNewOrReopened: true },
+    ]),
     {
       passed: false,
       newHighCritical: 2,
@@ -69,11 +67,9 @@ test("gate fails only threshold breaches and current new or reopened high findin
     },
   );
   assert.equal(
-    evaluateGate(
-      { scoreThreshold: null, failOnNewHighCritical: false },
-      0,
-      [{ severity: IssueSeverity.critical, isNewOrReopened: true }],
-    ).passed,
+    evaluateGate({ scoreThreshold: null, failOnNewHighCritical: false }, 0, [
+      { severity: IssueSeverity.critical, isNewOrReopened: true },
+    ]).passed,
     true,
   );
 });

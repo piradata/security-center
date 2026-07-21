@@ -79,7 +79,11 @@ export default async function IssuesPage({
             </option>
           ))}
         </Filter>
-        <Filter name="serviceId" label="Service" value={params.get("serviceId")}>
+        <Filter
+          name="serviceId"
+          label="Service"
+          value={params.get("serviceId")}
+        >
           {services.map((service) => (
             <option key={service.id} value={service.id}>
               {service.application.name} / {service.name}
@@ -175,7 +179,9 @@ export default async function IssuesPage({
                 <td className="px-4 py-3 capitalize">{issue.severity}</td>
                 <td className="px-4 py-3 capitalize">{label(issue.status)}</td>
                 <td className="px-4 py-3">
-                  {issue.assignee?.name ?? issue.assignee?.email ?? "Unassigned"}
+                  {issue.assignee?.name ??
+                    issue.assignee?.email ??
+                    "Unassigned"}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   {issue.lastSeenAt.toLocaleString()}
@@ -184,7 +190,10 @@ export default async function IssuesPage({
             ))}
             {!issues.length && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-zinc-500">
+                <td
+                  colSpan={7}
+                  className="px-4 py-10 text-center text-zinc-500"
+                >
                   No issues match these filters.
                 </td>
               </tr>

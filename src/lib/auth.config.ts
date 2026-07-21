@@ -32,14 +32,16 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
-      if (pathname.startsWith("/api/auth") || pathname === "/login") return true;
+      if (pathname.startsWith("/api/auth") || pathname === "/login")
+        return true;
       if (pathname.startsWith("/api/")) return true;
       return !!auth?.user;
     },
     async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
-        token.role = ((user as { role?: UserRole }).role ?? "member") as UserRole;
+        token.role = ((user as { role?: UserRole }).role ??
+          "member") as UserRole;
       }
       return token;
     },

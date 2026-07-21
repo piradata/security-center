@@ -83,12 +83,7 @@ test("never changes suppressed issues automatically", () => {
     status: IssueStatus.suppressed,
   };
 
-  const present = buildReconciliationPlan(
-    [existing],
-    "npm",
-    [finding],
-    now,
-  );
+  const present = buildReconciliationPlan([existing], "npm", [finding], now);
   const missing = buildReconciliationPlan([existing], "npm", [], now);
 
   assert.equal(present.seen[0].status, IssueStatus.suppressed);

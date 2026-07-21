@@ -19,8 +19,12 @@ export function effectiveToolConfig(
   applicationDefaults: ToolSetting[],
   serviceOverrides: ToolSetting[],
 ): EffectiveTool[] {
-  const defaults = new Map(applicationDefaults.map((config) => [config.toolId, config.enabled]));
-  const overrides = new Map(serviceOverrides.map((config) => [config.toolId, config.enabled]));
+  const defaults = new Map(
+    applicationDefaults.map((config) => [config.toolId, config.enabled]),
+  );
+  const overrides = new Map(
+    serviceOverrides.map((config) => [config.toolId, config.enabled]),
+  );
 
   return tools.map((tool) => ({
     ...tool,

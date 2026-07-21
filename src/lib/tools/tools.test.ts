@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { IssueSeverity } from "@/generated/prisma/enums";
 import {
@@ -12,9 +12,9 @@ import {
   quoteShellArgument,
   renderShellCommand,
   semgrepAdapter,
+  type ToolAdapter,
   toolRegistry,
   trivyAdapter,
-  type ToolAdapter,
 } from "@/lib/tools";
 
 const fixture = (name: string) =>
@@ -91,7 +91,10 @@ test("normalizes gitleaks findings without retaining secret material", () => {
   assert.equal(findings[0].severity, IssueSeverity.high);
   assert.equal(findings[0].title, "github-pat secret in src/config.ts");
   assert.doesNotMatch(
-    JSON.stringify({ description: findings[0].description, raw: findings[0].raw }),
+    JSON.stringify({
+      description: findings[0].description,
+      raw: findings[0].raw,
+    }),
     /ghp_fixtureSecretValue/,
   );
 
@@ -142,9 +145,7 @@ test("normalizes all Trivy fs finding kinds with stable, redacted identities", (
   assert.equal(JSON.stringify(findings[2].raw).includes("AKIAEXAMPLE"), false);
 
   const changed = cloneFixture("trivy");
-  const result = (
-    changed.Results as Array<Record<string, unknown>>
-  )[0];
+  const result = (changed.Results as Array<Record<string, unknown>>)[0];
   const vulnerability = (
     result.Vulnerabilities as Array<Record<string, unknown>>
   )[0];
@@ -162,9 +163,7 @@ test("prefers Semgrep's engine fingerprint over mutable location text", () => {
   assert.equal(findings[0].severity, IssueSeverity.high);
 
   const changed = cloneFixture("semgrep");
-  const result = (
-    changed.results as Array<Record<string, unknown>>
-  )[0];
+  const result = (changed.results as Array<Record<string, unknown>>)[0];
   (result.start as Record<string, unknown>).line = 40;
   (result.extra as Record<string, unknown>).message = "Updated message";
   assert.equal(
@@ -195,8 +194,5 @@ test("exposes all five V1 adapters and runner exit-code expectations", () => {
     npmAuditAdapter.run({ outputFile: "npm.json" }).acceptedExitCodes,
     [0, 1],
   );
-  assert.throws(
-    () => semgrepAdapter.normalize("{not-json"),
-    /not valid JSON/,
-  );
+  assert.throws(() => semgrepAdapter.normalize("{not-json"), /not valid JSON/);
 });

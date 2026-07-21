@@ -34,7 +34,8 @@ function command(
 }
 
 export function quoteShellArgument(value: string) {
-  if (value.includes("\0")) throw new TypeError("Shell arguments cannot contain NUL");
+  if (value.includes("\0"))
+    throw new TypeError("Shell arguments cannot contain NUL");
   return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
@@ -103,13 +104,7 @@ const pythonExecutable = (toolsDir: string) => `${toolsDir}/python/bin/python`;
 export const gitleaksAdapter: ToolAdapter = {
   key: "gitleaks",
   detect(root = ".") {
-    return command([
-      "git",
-      "-C",
-      root,
-      "rev-parse",
-      "--is-inside-work-tree",
-    ]);
+    return command(["git", "-C", root, "rev-parse", "--is-inside-work-tree"]);
   },
   install(toolsDir = DEFAULT_TOOLS_DIR) {
     return [
@@ -123,11 +118,7 @@ export const gitleaksAdapter: ToolAdapter = {
       ]),
     ];
   },
-  run({
-    outputFile,
-    root = ".",
-    toolsDir = DEFAULT_TOOLS_DIR,
-  }: RunOptions) {
+  run({ outputFile, root = ".", toolsDir = DEFAULT_TOOLS_DIR }: RunOptions) {
     return command(
       [
         `${toolsDir}/bin/gitleaks`,
@@ -150,13 +141,15 @@ export const gitleaksAdapter: ToolAdapter = {
       const startLine =
         typeof finding.StartLine === "number" ? finding.StartLine : undefined;
       if (!ruleId || !path || startLine === undefined) {
-        throw new TypeError("Gitleaks finding requires rule id, file, and line");
+        throw new TypeError(
+          "Gitleaks finding requires rule id, file, and line",
+        );
       }
       const engineFingerprint = text(finding.Fingerprint);
       const secret = text(finding.Secret);
       const match = text(finding.Match);
-      const sensitive = [secret, match].filter(
-        (value): value is string => Boolean(value),
+      const sensitive = [secret, match].filter((value): value is string =>
+        Boolean(value),
       );
       const redact = (value: string | undefined) =>
         sensitive.reduce(
@@ -244,7 +237,10 @@ export const npmAuditAdapter: ToolAdapter = {
           : (() => {
               const advisory = record(value, "npm audit advisory");
               const identity =
-                advisory.source ?? advisory.url ?? advisory.name ?? advisory.title;
+                advisory.source ??
+                advisory.url ??
+                advisory.name ??
+                advisory.title;
               return identity === undefined
                 ? []
                 : [
@@ -265,10 +261,11 @@ export const npmAuditAdapter: ToolAdapter = {
       return {
         fingerprint: fingerprint("npm-audit", name, identities),
         title,
-        description: advisories
-          .map((advisory) => advisory.title)
-          .filter((value): value is string => Boolean(value))
-          .join("; ") || undefined,
+        description:
+          advisories
+            .map((advisory) => advisory.title)
+            .filter((value): value is string => Boolean(value))
+            .join("; ") || undefined,
         severity: severity(vulnerability.severity, IssueSeverity.medium),
         raw: vulnerability,
       };
@@ -303,11 +300,7 @@ export const pipAuditAdapter: ToolAdapter = {
       ]),
     ];
   },
-  run({
-    outputFile,
-    root = ".",
-    toolsDir = DEFAULT_TOOLS_DIR,
-  }: RunOptions) {
+  run({ outputFile, root = ".", toolsDir = DEFAULT_TOOLS_DIR }: RunOptions) {
     return command(
       [
         "sh",
@@ -339,7 +332,8 @@ export const pipAuditAdapter: ToolAdapter = {
             "pip-audit vulnerability",
           );
           const id = text(vulnerability.id);
-          if (!id) throw new TypeError("pip-audit vulnerability requires an id");
+          if (!id)
+            throw new TypeError("pip-audit vulnerability requires an id");
 
           return {
             fingerprint: fingerprint("pip-audit", name, id),
@@ -381,11 +375,7 @@ export const trivyAdapter: ToolAdapter = {
       command(["rm", "-f", installer]),
     ];
   },
-  run({
-    outputFile,
-    root = ".",
-    toolsDir = DEFAULT_TOOLS_DIR,
-  }: RunOptions) {
+  run({ outputFile, root = ".", toolsDir = DEFAULT_TOOLS_DIR }: RunOptions) {
     return command([
       `${toolsDir}/bin/trivy`,
       "fs",
@@ -411,10 +401,7 @@ export const trivyAdapter: ToolAdapter = {
         result.Vulnerabilities ?? [],
         "Trivy vulnerabilities",
       )) {
-        const vulnerability = record(
-          vulnerabilityValue,
-          "Trivy vulnerability",
-        );
+        const vulnerability = record(vulnerabilityValue, "Trivy vulnerability");
         const id = text(vulnerability.VulnerabilityID);
         const packageName = text(vulnerability.PkgName);
         if (!id || !packageName) {
@@ -443,8 +430,7 @@ export const trivyAdapter: ToolAdapter = {
           misconfigurationValue,
           "Trivy misconfiguration",
         );
-        const id =
-          text(misconfiguration.ID) ?? text(misconfiguration.AVDID);
+        const id = text(misconfiguration.ID) ?? text(misconfiguration.AVDID);
         if (!id) throw new TypeError("Trivy misconfiguration requires an id");
         const cause = record(
           misconfiguration.CauseMetadata ?? {},
@@ -506,7 +492,7 @@ export const semgrepAdapter: ToolAdapter = {
     return command([
       "sh",
       "-c",
-      'find "$1" -type f \\( -name \'*.c\' -o -name \'*.cc\' -o -name \'*.cpp\' -o -name \'*.cs\' -o -name \'*.go\' -o -name \'*.java\' -o -name \'*.js\' -o -name \'*.jsx\' -o -name \'*.php\' -o -name \'*.py\' -o -name \'*.rb\' -o -name \'*.rs\' -o -name \'*.ts\' -o -name \'*.tsx\' \\) -print -quit | grep -q .',
+      "find \"$1\" -type f \\( -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cs' -o -name '*.go' -o -name '*.java' -o -name '*.js' -o -name '*.jsx' -o -name '*.php' -o -name '*.py' -o -name '*.rb' -o -name '*.rs' -o -name '*.ts' -o -name '*.tsx' \\) -print -quit | grep -q .",
       "security-center-semgrep-detect",
       root,
     ]);
@@ -526,11 +512,7 @@ export const semgrepAdapter: ToolAdapter = {
       ]),
     ];
   },
-  run({
-    outputFile,
-    root = ".",
-    toolsDir = DEFAULT_TOOLS_DIR,
-  }: RunOptions) {
+  run({ outputFile, root = ".", toolsDir = DEFAULT_TOOLS_DIR }: RunOptions) {
     return command([
       `${toolsDir}/python/bin/semgrep`,
       "scan",

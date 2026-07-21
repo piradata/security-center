@@ -3,8 +3,8 @@ import test from "node:test";
 import { IssueSeverity, IssueStatus } from "@/generated/prisma/enums";
 import {
   applicationScore,
-  serviceScore,
   SEVERITY_WEIGHTS,
+  serviceScore,
 } from "@/lib/scoring";
 
 test("service score uses fixed weights for open and in-progress issues only", () => {
@@ -16,9 +16,7 @@ test("service score uses fixed weights for open and in-progress issues only", ()
       { severity: IssueSeverity.low, status: IssueStatus.absent },
       { severity: IssueSeverity.info, status: IssueStatus.suppressed },
     ]),
-    100 -
-      SEVERITY_WEIGHTS.critical -
-      SEVERITY_WEIGHTS.high,
+    100 - SEVERITY_WEIGHTS.critical - SEVERITY_WEIGHTS.high,
   );
 });
 

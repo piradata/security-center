@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   IssueStatus,
   type IssueStatus as Status,
@@ -44,7 +44,9 @@ export function IssueControls({
     const result = await response.json();
 
     setSaving(false);
-    setMessage(response.ok ? "Issue updated." : result.error ?? "Update failed.");
+    setMessage(
+      response.ok ? "Issue updated." : (result.error ?? "Update failed."),
+    );
     if (response.ok) router.refresh();
   }
 
@@ -87,7 +89,10 @@ export function IssueControls({
         >
           {saving ? "Saving…" : "Save"}
         </button>
-        <p aria-live="polite" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p
+          aria-live="polite"
+          className="text-sm text-zinc-600 dark:text-zinc-400"
+        >
           {message}
         </p>
       </div>

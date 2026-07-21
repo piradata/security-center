@@ -1,10 +1,11 @@
+import { JobType, type Prisma } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseIssueExportPayload } from "@/lib/issue-export";
-import { JobType, type Prisma } from "@/generated/prisma/client";
 
 export async function GET() {
-  if (!(await auth())) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await auth()))
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const jobs = await prisma.job.findMany({
     where: { type: JobType.export_issues },
@@ -16,7 +17,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await auth())) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await auth()))
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const payload = parseIssueExportPayload(await request.json());

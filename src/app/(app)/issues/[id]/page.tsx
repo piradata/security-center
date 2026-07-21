@@ -41,7 +41,8 @@ export default async function IssuePage({
       <div className="mt-4">
         <h1 className="text-2xl font-semibold tracking-tight">{issue.title}</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          {issue.service.application.name} / {issue.service.name} · {issue.tool.name}
+          {issue.service.application.name} / {issue.service.name} ·{" "}
+          {issue.tool.name}
         </p>
       </div>
 
@@ -65,9 +66,14 @@ export default async function IssuePage({
           <Detail label="Fingerprint" value={issue.fingerprint} />
           <Detail
             label="Assignee"
-            value={issue.assignee?.name ?? issue.assignee?.email ?? "Unassigned"}
+            value={
+              issue.assignee?.name ?? issue.assignee?.email ?? "Unassigned"
+            }
           />
-          <Detail label="First seen" value={issue.firstSeenAt.toLocaleString()} />
+          <Detail
+            label="First seen"
+            value={issue.firstSeenAt.toLocaleString()}
+          />
           <Detail label="Last seen" value={issue.lastSeenAt.toLocaleString()} />
           {issue.regressionAt && (
             <Detail
@@ -77,11 +83,15 @@ export default async function IssuePage({
           )}
         </dl>
         {issue.description && (
-          <p className="mt-5 whitespace-pre-wrap text-sm">{issue.description}</p>
+          <p className="mt-5 whitespace-pre-wrap text-sm">
+            {issue.description}
+          </p>
         )}
         {issue.raw !== null && (
           <details className="mt-5">
-            <summary className="cursor-pointer text-sm font-medium">Raw finding</summary>
+            <summary className="cursor-pointer text-sm font-medium">
+              Raw finding
+            </summary>
             <pre className="mt-2 overflow-auto rounded-md bg-zinc-100 p-3 text-xs dark:bg-zinc-900">
               {JSON.stringify(issue.raw, null, 2)}
             </pre>
