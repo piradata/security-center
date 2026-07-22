@@ -2,6 +2,8 @@
 
 **ASPM-lite** catalog + quality gate. Catalog applications and services, reconcile scanner Issues with ownership, and enforce a CI quality gate — without replacing SonarQube. Scanners are inputs; Security Center owns catalog, Issues, scores, and the gate.
 
+For a short quickstart, see below. For architecture and how CI, Issues, and the worker fit together, see [documentation.md](documentation.md). Deferred work: [TODO.md](TODO.md).
+
 ## Stack
 
 | Layer | Choice |
