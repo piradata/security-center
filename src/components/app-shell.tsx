@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SecHubLogo } from "@/components/sec-hub-logo";
+import { SignOutButton } from "@/components/sign-out-button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -13,7 +15,13 @@ const NAV = [
   { href: "/settings", label: "Settings" },
 ] as const;
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  userEmail,
+}: {
+  children: React.ReactNode;
+  userEmail?: string | null;
+}) {
   const pathname = usePathname();
 
   return (
@@ -22,8 +30,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="border-b border-zinc-200 px-4 py-5 dark:border-zinc-800">
           <Link
             href="/dashboard"
-            className="text-lg font-semibold tracking-tight"
+            className="flex items-center gap-2 text-lg font-semibold tracking-tight"
           >
+            <SecHubLogo className="h-6 w-6" />
             Security Center
           </Link>
           <p className="mt-0.5 text-xs text-zinc-500">ASPM-lite</p>
@@ -48,6 +57,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+        <div className="border-t border-zinc-200 px-4 py-4 dark:border-zinc-800">
+          <p className="truncate text-xs text-zinc-500">{userEmail}</p>
+          <SignOutButton />
+        </div>
       </aside>
       <main className="flex-1 overflow-auto p-6 md:p-8">{children}</main>
     </div>

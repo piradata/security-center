@@ -2,46 +2,28 @@ import type { NextAuthConfig } from "next-auth";
 import type { Provider } from "next-auth/providers";
 import type { UserRole } from "@/generated/prisma/enums";
 
-export function isDevAuth(): boolean {
-  return process.env.NODE_ENV === "development";
-}
-
-function oidcProvider(): Provider | null {
-  // ponytail: skip IdP in local/dev; Credentials provider lives in auth.ts
-  if (isDevAuth()) return null;
-
-  const issuer = process.env.AUTH_OIDC_ISSUER;
-  const clientId = process.env.AUTH_OIDC_CLIENT_ID;
-  const clientSecret = process.env.AUTH_OIDC_CLIENT_SECRET;
-  if (!issuer || !clientId || !clientSecret) return null;
-
-  return {
-    id: "oidc",
-    name: "OIDC",
-    type: "oidc",
-    issuer,
-    clientId,
-    clientSecret,
-    allowDangerousEmailAccountLinking: true,
-  };
-}
-
-const providers: Provider[] = [];
-const oidc = oidcProvider();
-if (oidc) providers.push(oidc);
-
-/** Edge-safe Auth.js config (no Prisma) — used by proxy. */
+/**
+ * Edge-safe Auth.js config. It has no providers because credential
+ * verification needs Prisma/scrypt and lives in `auth.ts`.
+ */
 export const authConfig = {
-  providers,
+  providers: [] as Provider[],
   pages: { signIn: "/login" },
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60,
+  },
   trustHost: true,
   callbacks: {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
-      if (pathname.startsWith("/api/auth") || pathname === "/login")
+      if (
+        pathname.startsWith("/api/") ||
+        pathname === "/login" ||
+        pathname === "/setup"
+      ) {
         return true;
-      if (pathname.startsWith("/api/")) return true;
+      }
       return !!auth?.user;
     },
     async jwt({ token, user }) {

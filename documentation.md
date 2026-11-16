@@ -74,7 +74,7 @@ erDiagram
 | **Issue** | Normalized finding (what the UI calls an issue) |
 | **QualityGate** | Score threshold + “fail on new High/Critical” |
 | **Job / Export** | Background export of issues to a downloadable file |
-| **User** | OIDC user; Issues assign to a **user** only in V1 |
+| **User** | Local account (email + password); Issues assign to a **user** only in V1 |
 
 ### Issue vs repo ticket
 
@@ -219,11 +219,15 @@ sequenceDiagram
 
 ## 10. Auth
 
-- **OIDC** via Auth.js (NextAuth v5).
-- **Bootstrap admin:** first login matching `BOOTSTRAP_ADMIN_EMAIL` becomes `admin`.
+- **Credentials** via Auth.js (NextAuth v5): email + password.
+- Passwords are hashed with Node `scrypt` (`src/lib/password.ts`); only a hash is stored.
+- **First-run admin:** when the `User` table is empty, `/setup` creates the first account with role `admin`. Once any user exists, `/setup` redirects to `/login`.
+- Admins create members and reset passwords in **Settings**; members can change their own password.
 - Roles: `admin`, `member`.
-- UI: session cookies. CI: service bearer tokens.
-- Edge auth gate: `src/proxy.ts` (Next.js “proxy” convention; formerly middleware).
+- UI: JWT session cookies (30 days). CI: service bearer tokens.
+- Failure throttle: 5 failed logins per client IP per 15 minutes (in-memory, per process).
+- Edge auth gate: `src/proxy.ts` (Next.js “proxy” convention; formerly middleware). `/login`, `/setup`, `/api/*`, and static assets are public; route handlers enforce their own auth.
+- Lockout recovery: `pnpm auth:password <email> [--admin]` inside the app container.
 
 ---
 
@@ -236,8 +240,9 @@ sequenceDiagram
 | `/issues` | Filter, assign user, status |
 | `/gates` | Quality gate configuration |
 | `/exports` | Export jobs + download |
-| `/settings` | Auth / account notes |
-| `/login` | OIDC sign-in |
+| `/settings` | Account password, admin user management |
+| `/login` | Email + password sign-in |
+| `/setup` | First-run admin (only while no user exists) |
 
 ---
 
@@ -248,8 +253,12 @@ sequenceDiagram
   README.md                 # Quickstart
   documentation.md          # This file
   TODO.md                   # V2 backlog
-  docker-compose.yml        # Dev: app + worker + postgres (bind-mount)
-  Dockerfile                # Stages: dev | build | runner | worker
+  compose.yaml              # Production-style one-command stack
+  compose.dev.yaml          # Dev: hot reload, bind mount
+  arcane/compose.yaml       # Homelab/Arcane stack (GHCR image, port 5377)
+  Dockerfile                # Stages: dev | build | runner
+  docker/entrypoint.sh      # Migrations, seed, AUTH_SECRET
+  scripts/set-password.ts   # Lockout recovery
   prisma/                   # Schema + migrations + seed
   src/
     app/                    # Next.js App Router (UI + API routes)
@@ -259,7 +268,7 @@ sequenceDiagram
   biome.json                # Lint / format
 ```
 
-Package manager: **pnpm** (Corepack-pinned in `package.json`). Lint: **Biome**.
+Package manager: **pnpm** (pinned in `package.json`). Lint: **Biome**.
 
 ---
 
@@ -267,11 +276,21 @@ Package manager: **pnpm** (Corepack-pinned in `package.json`). Lint: **Biome**.
 
 | Mode | How |
 |------|-----|
-| **Dev (Compose)** | `Dockerfile` target `dev`; bind-mount repo; shared `node_modules` volume; `pnpm install --frozen-lockfile` on start |
-| **Production app** | `docker build --target runner` |
-| **Production worker** | `docker build --target worker` |
+| **Local, one command** | `docker compose up`; builds `runner`, starts Postgres 18 + app + worker |
+| **Dev (hot reload)** | `docker compose -f compose.dev.yaml up --build`; `dev` target, bind mount, shared `node_modules` |
+| **Production** | One `runner` image for both roles; worker overrides the command |
+| **Homelab** | `arcane/compose.yaml` pulls `ghcr.io/piradata/security-center:latest` |
 
-Compose loads `.env` via `env_file`, but overrides `DATABASE_URL` (hostname `postgres`) and `STORAGE_PATH`.
+PostgreSQL 18 stores data in `/var/lib/postgresql/18/docker`, so every stack mounts the volume at `/var/lib/postgresql` (not the pre-18 `/var/lib/postgresql/data`).
+
+The app entrypoint (`docker/entrypoint.sh`) applies migrations and runs the idempotent tool seed. The worker runs with `MIGRATE_ON_START=false` and waits for the app healthcheck. Locally, an empty `AUTH_SECRET` is generated into `/data/.auth-secret`; set it explicitly in Arcane. Compose overrides `DATABASE_URL` (hostname `postgres`) and `STORAGE_PATH`.
+
+### Deployment
+
+1. Push to `main` → GitHub Actions runs lint/typecheck/tests, then publishes `ghcr.io/piradata/security-center:latest` and `:<sha>`.
+2. Arcane project `security-center` runs `arcane/compose.yaml` with `com.getarcaneapp.arcane.updater=true`.
+3. Nginx Proxy Manager: `sechub.local.piradata.dev` → `http://192.168.1.77:5377`, using the existing `*.local.piradata.dev` wildcard certificate.
+4. Set `AUTH_URL=https://sechub.local.piradata.dev` before the first login so cookies are secure.
 
 ---
 

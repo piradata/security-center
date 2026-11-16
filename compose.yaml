@@ -1,0 +1,82 @@
+# Single-command local stack:
+#
+#   docker compose up
+#
+# First run builds the production image, migrates, seeds the tools, and serves
+# http://localhost:3000. The first visit goes to /setup.
+#
+# No .env is required. AUTH_SECRET is generated on first start and persisted in
+# the app_data volume. Override any value in a local .env for LAN access.
+
+name: security-center-local
+
+x-app: &app
+  build:
+    context: .
+    target: runner
+  image: security-center:local
+  environment:
+    DATABASE_URL: postgresql://${POSTGRES_USER:-security}:${POSTGRES_PASSWORD:-security}@postgres:5432/${POSTGRES_DB:-security_center}?schema=public
+    STORAGE_PATH: /data/exports
+    AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+    AUTH_SECRET: ${AUTH_SECRET:-}
+  volumes:
+    - app_data:/data
+  restart: unless-stopped
+  init: true
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-security}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-security}
+      POSTGRES_DB: ${POSTGRES_DB:-security_center}
+    volumes:
+      # PostgreSQL 18 keeps PGDATA in /var/lib/postgresql/18/docker; mount the
+      # parent directory, not the pre-18 /var/lib/postgresql/data path.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-security} -d ${POSTGRES_DB:-security_center}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    <<: *app
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  worker:
+    <<: *app
+    command: ["pnpm", "run", "worker"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-security}:${POSTGRES_PASSWORD:-security}@postgres:5432/${POSTGRES_DB:-security_center}?schema=public
+      STORAGE_PATH: /data/exports
+      MIGRATE_ON_START: "false"
+      ROLE: worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  app_data:

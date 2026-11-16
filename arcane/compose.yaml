@@ -1,0 +1,92 @@
+# Homelab stack: Arcane project "security-center".
+# Local development uses ../compose.dev.yaml.
+#
+# GitHub publishes ghcr.io/piradata/security-center:latest on every push to
+# main. Arcane's updater label redeploys when that tag changes.
+#
+# Project .env (created in Arcane) supplies POSTGRES_PASSWORD, AUTH_SECRET,
+# AUTH_URL and APP_PORT. See ./.env.example.
+#
+# Nginx Proxy Manager: sechub.local.piradata.dev -> 192.168.1.77:5377.
+
+name: security-center
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-security}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the Arcane project .env}
+      POSTGRES_DB: ${POSTGRES_DB:-security_center}
+    volumes:
+      # PostgreSQL 18 uses /var/lib/postgresql/18/docker as PGDATA.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-security} -d ${POSTGRES_DB:-security_center}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    image: ghcr.io/piradata/security-center:latest
+    container_name: security-center
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-security}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the Arcane project .env}@postgres:5432/${POSTGRES_DB:-security_center}?schema=public
+      STORAGE_PATH: /data/exports
+      AUTH_URL: ${AUTH_URL:-https://sechub.local.piradata.dev}
+      MIGRATE_ON_START: "true"
+      ROLE: app
+    ports:
+      - "${APP_PORT:-5377}:3000"
+    volumes:
+      - app_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - com.getarcaneapp.arcane.updater=true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    init: true
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/piradata/security-center:latest
+    env_file:
+      - path: .env
+        required: true
+    command: ["pnpm", "run", "worker"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-security}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the Arcane project .env}@postgres:5432/${POSTGRES_DB:-security_center}?schema=public
+      STORAGE_PATH: /data/exports
+      MIGRATE_ON_START: "false"
+      ROLE: worker
+    volumes:
+      - app_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    labels:
+      - com.getarcaneapp.arcane.updater=true
+    init: true
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  app_data:

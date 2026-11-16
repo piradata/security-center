@@ -2,17 +2,17 @@
 
 **ASPM-lite** catalog + quality gate. Catalog applications and services, reconcile scanner Issues with ownership, and enforce a CI quality gate — without replacing SonarQube. Scanners are inputs; Security Center owns catalog, Issues, scores, and the gate.
 
-For a short quickstart, see below. For architecture and how CI, Issues, and the worker fit together, see [documentation.md](documentation.md). Deferred work: [TODO.md](TODO.md).
+For architecture and how CI, Issues, and the worker fit together, see [documentation.md](documentation.md). Deferred work: [TODO.md](TODO.md).
 
 ## Stack
 
 | Layer | Choice |
 |-------|--------|
 | App | Next.js (App Router) + TypeScript |
-| Package manager | pnpm (Corepack-pinned in `package.json`) |
-| UI | Tailwind + shadcn/ui |
-| DB | PostgreSQL + Prisma |
-| Auth | Auth.js OIDC + bootstrap admin |
+| Package manager | pnpm (pinned in `package.json`) |
+| UI | Tailwind |
+| DB | PostgreSQL 18 + Prisma |
+| Auth | Auth.js credentials (email + password), first-run admin |
 | Worker | `src/worker` — export jobs only |
 | Jobs | Postgres `FOR UPDATE SKIP LOCKED` (no Redis in V1) |
 | CI | One `curl \| bash` → `GET /api/v1/ci/scan.sh` with `SC_TOKEN` |
@@ -21,54 +21,66 @@ For a short quickstart, see below. For architecture and how CI, Issues, and the 
 
 No host agent. No server-side clone/scan. Teams replace prior scanner steps with the curl; which tools run is configured in the UI.
 
-## Quickstart
-
-### 1. Package manager
-
-pnpm is pinned via Corepack in `package.json` (`packageManager`).
+## Quickstart — one command
 
 ```bash
-corepack enable
-pnpm install
+docker compose up
 ```
 
-### 2. Start with Docker Compose (dev)
+That builds the production image, starts Postgres 18, the app, and the export worker, applies migrations, and seeds the tool catalog. No `.env` is required: `AUTH_SECRET` is generated on first start and persisted in the `app_data` volume.
 
-Compose bind-mounts the repo and uses the Dockerfile `dev` stage. Dependencies install into a shared `node_modules` volume (`pnpm install --frozen-lockfile`).
+Open <http://localhost:3000>. The first visit goes to **`/setup`**; the account you create there becomes the admin. After that, `/setup` is closed and everyone signs in at `/login`.
+
+To use another port or a LAN hostname:
 
 ```bash
-cp .env.example .env   # required — compose loads it via env_file for app + worker
-docker compose up --build
+APP_PORT=8080 AUTH_URL=http://192.168.1.77:8080 docker compose up
 ```
 
-App: http://localhost:3000. Worker shares the same mount. Auth/OIDC come from `.env`; `DATABASE_URL` / `STORAGE_PATH` are overridden for the Compose network.
+### Development (hot reload)
 
-**Dev Container (VS Code / Cursor):** open the repo → “Reopen in Container”. That reuses this Compose stack (Postgres + worker), copies `.env` from `.env.example` if missing, installs deps, migrates, and seeds. Then in the container terminal:
+```bash
+cp .env.example .env   # then replace AUTH_SECRET
+docker compose -f compose.dev.yaml up --build
+```
+
+This bind-mounts the repo and uses the Dockerfile `dev` stage. Dependencies install into a shared `node_modules` volume.
+
+**Dev Container (VS Code / Cursor):** open the repo → “Reopen in Container”. That uses `compose.dev.yaml`, copies `.env` from `.env.example` if missing, installs deps, migrates, and seeds. Then in the container terminal:
 
 ```bash
 pnpm run dev --hostname 0.0.0.0 --port 3000
 ```
 
-Production image (no host `node_modules`):
+### Accounts
+
+- First `/setup` = admin.
+- Admins add members and reset passwords in **Settings**.
+- Members can change their own password there.
+- Locked out of the only admin account? Run the recovery script inside the app container:
 
 ```bash
-docker build --target runner -t security-center:app .
-docker build --target worker -t security-center:worker .
+# local compose
+docker compose exec app pnpm auth:password admin@example.com --admin
+# Arcane deployment
+docker exec security-center pnpm auth:password admin@example.com --admin
 ```
 
-### 3. Environment variables
+It reads `NEW_PASSWORD` from the environment; pass it as an env var to avoid shell history.
+
+### Environment variables
 
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `AUTH_*` / OIDC | Auth.js OIDC provider settings |
-| `BOOTSTRAP_ADMIN_EMAIL` | First admin (matched on OIDC login) |
+| `AUTH_SECRET` | Auth.js signing secret; generated locally if empty |
+| `AUTH_URL` | Public base URL (set to the HTTPS hostname behind a proxy) |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Compose database defaults |
+| `APP_PORT` | Host port for the app (local `3000`, Arcane `5377`) |
 | `SC_URL` | Base URL of Security Center (used by CI) |
-| `SC_TOKEN` | Service token for CI (`Authorization: Bearer …`) |
+| `SC_TOKEN` | Service token for CI (`Authorization: Bearer …`), created in the UI |
 
-Exact names may match Auth.js conventions in the app config once scaffolded.
-
-### 4. One-curl CI snippet
+### One-curl CI snippet
 
 In your pipeline (after checkout), set `SC_URL` and `SC_TOKEN`, then:
 
@@ -78,6 +90,35 @@ curl -fsSL -H "Authorization: Bearer $SC_TOKEN" \
 ```
 
 Internally: probe → fetch enabled tools → install/run on the CI runner → ingest → quality gate (exit 0/1). Execution stays on the runner, never on the Security Center host.
+
+## Deploy (GitHub → GHCR → Arcane → NPM)
+
+Pushes to `main` run lint/typecheck/tests and publish one image:
+
+```
+ghcr.io/piradata/security-center:latest
+ghcr.io/piradata/security-center:<commit-sha>
+```
+
+The `runner` image serves the app by default and runs the worker with `command: pnpm run worker`.
+
+1. Push to `main` and confirm the GHCR package exists.
+2. If the package is private, add `ghcr.io` registry credentials in Arcane.
+3. Create Arcane project **`security-center`** from [`arcane/compose.yaml`](arcane/compose.yaml).
+4. Add the project `.env` from [`arcane/.env.example`](arcane/.env.example), including `AUTH_URL=https://sechub.local.piradata.dev` and `APP_PORT=5377`.
+5. Deploy, then claim the admin at `/setup` immediately.
+6. Arcane auto-updates when `:latest` changes (`com.getarcaneapp.arcane.updater=true`). Pin a `:<sha>` tag to roll back.
+
+Nginx Proxy Manager host:
+
+| Field | Value |
+|-------|-------|
+| Domain | `sechub.local.piradata.dev` |
+| Forward | `http://192.168.1.77:5377` |
+| SSL | existing `*.local.piradata.dev` wildcard |
+| Extras | websockets on, block common exploits, force SSL |
+
+Add `client_max_body_size 50m;` in the Advanced tab for CI ingest payloads.
 
 ## Roles (V1)
 

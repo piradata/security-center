@@ -1,6 +1,6 @@
 {
   "name": "Security Center",
-  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.yml"],
+  "dockerComposeFile": ["../compose.dev.yaml", "docker-compose.yml"],
   "service": "app",
   "workspaceFolder": "/app",
   "shutdownAction": "stopCompose",

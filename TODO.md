@@ -2,6 +2,7 @@
 
 Deferred from V1. Do not treat as committed scope until scheduled.
 
+- SSO / OIDC (local credentials are the supported login in V1)
 - Teams (assign Issue to team)
 - SonarScanner / SonarQube ingest
 - OWASP ZAP (DAST)

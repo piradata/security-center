@@ -15,3 +15,6 @@ tmp-app
 .claude
 Dockerfile*
 docker-compose*.yml
+compose*.yaml
+arcane
+.github

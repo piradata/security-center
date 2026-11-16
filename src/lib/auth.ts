@@ -1,56 +1,44 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { UserRole } from "@/generated/prisma/client";
-import { authConfig, isDevAuth } from "@/lib/auth.config";
+import { authConfig } from "@/lib/auth.config";
 import { prisma } from "@/lib/db";
+import { verifyPassword } from "@/lib/password";
 
-function bootstrapAdminEmail(): string | undefined {
-  return process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase();
-}
+const credentialsProvider = Credentials({
+  id: "credentials",
+  name: "Email and password",
+  credentials: {
+    email: { label: "Email", type: "email" },
+    password: { label: "Password", type: "password" },
+  },
+  async authorize(credentials) {
+    const email =
+      typeof credentials?.email === "string"
+        ? credentials.email.trim().toLowerCase()
+        : "";
+    const password =
+      typeof credentials?.password === "string" ? credentials.password : "";
+    if (!email || !password) return null;
 
-const devProvider = Credentials({
-  id: "dev",
-  name: "Development",
-  credentials: {},
-  async authorize() {
-    const email = bootstrapAdminEmail() ?? "dev@localhost";
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return existing;
-    return prisma.user.create({
-      data: { email, name: "Dev", role: UserRole.admin },
-    });
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user?.passwordHash) return null;
+
+    const valid = await verifyPassword(password, user.passwordHash);
+    if (!valid) return null;
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
   },
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  providers: [
-    ...authConfig.providers,
-    ...(isDevAuth() ? [devProvider] : []),
-  ],
-  adapter: PrismaAdapter(prisma),
-  events: {
-    async createUser({ user }) {
-      const email = user.email?.toLowerCase();
-      const bootstrap = bootstrapAdminEmail();
-      if (email && bootstrap && email === bootstrap) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { role: UserRole.admin },
-        });
-      }
-    },
-    async signIn({ user }) {
-      const email = user.email?.toLowerCase();
-      const bootstrap = bootstrapAdminEmail();
-      if (!email || !bootstrap || email !== bootstrap || !user.id) return;
-      await prisma.user.updateMany({
-        where: { id: user.id, role: { not: UserRole.admin } },
-        data: { role: UserRole.admin },
-      });
-    },
-  },
+  providers: [credentialsProvider],
   callbacks: {
     ...authConfig.callbacks,
     async jwt({ token, user }) {
@@ -58,24 +46,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.sub = user.id;
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { role: true, email: true },
+          select: { role: true },
         });
-        const email = (dbUser?.email ?? user.email)?.toLowerCase();
-        const bootstrap = bootstrapAdminEmail();
-        let role = dbUser?.role ?? UserRole.member;
-        if (
-          email &&
-          bootstrap &&
-          email === bootstrap &&
-          role !== UserRole.admin
-        ) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { role: UserRole.admin },
-          });
-          role = UserRole.admin;
-        }
-        token.role = role;
+        token.role =
+          dbUser?.role ?? (user as { role?: UserRole }).role ?? UserRole.member;
       }
       return token;
     },

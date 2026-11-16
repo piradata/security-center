@@ -1,6 +1,14 @@
+# Hot-reload development stack. Requires .env (cp .env.example .env).
+#
+#   docker compose -f compose.dev.yaml up --build
+#
+# The production-style single-command stack is ../compose.yaml.
+
+name: security-center-dev
+
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: security
       POSTGRES_PASSWORD: security
@@ -8,7 +16,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # PostgreSQL 18 keeps PGDATA in /var/lib/postgresql/18/docker; mount the
+      # parent directory, not the pre-18 /var/lib/postgresql/data path.
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U security -d security_center"]
       interval: 5s
