@@ -289,8 +289,8 @@ The app entrypoint (`docker/entrypoint.sh`) applies migrations and runs the idem
 
 1. Push to `main` → GitHub Actions runs lint/typecheck/tests, then publishes `ghcr.io/piradata/security-center:latest` and `:<sha>`.
 2. Arcane project `security-center` runs `arcane/compose.yaml` with `com.getarcaneapp.arcane.updater=true`.
-3. Nginx Proxy Manager: `sechub.cloud.piradata.dev` → `http://192.168.1.77:5377`, using the existing `*.cloud.piradata.dev` wildcard (also covers the local alias) certificate.
-4. Set `AUTH_URL=https://sechub.cloud.piradata.dev` before the first login so cookies are secure.
+3. Nginx Proxy Manager: `sechub.cloud.piradata.dev` → `http://192.168.1.77:5377`, using the existing `*.cloud.piradata.dev` wildcard (also covers the local alias) certificate. The WAN exposes NPM on **8443** because the modem uses 443 for its admin screen.
+4. Set `AUTH_URL=https://sechub.cloud.piradata.dev:8443` before the first login so cookies are secure.
 
 ---
 

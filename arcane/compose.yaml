@@ -8,6 +8,7 @@
 # AUTH_URL and APP_PORT. See ./.env.example.
 #
 # Nginx Proxy Manager: sechub.cloud.piradata.dev -> 192.168.1.77:5377.
+# Public URL uses HTTPS port 8443 (the modem owns WAN 443).
 
 name: security-center
 
@@ -37,7 +38,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-security}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the Arcane project .env}@postgres:5432/${POSTGRES_DB:-security_center}?schema=public
       STORAGE_PATH: /data/exports
-      AUTH_URL: ${AUTH_URL:-https://sechub.cloud.piradata.dev}
+      AUTH_URL: ${AUTH_URL:-https://sechub.cloud.piradata.dev:8443}
       MIGRATE_ON_START: "true"
       ROLE: app
     ports:
