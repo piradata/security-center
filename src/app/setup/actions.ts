@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 import { UserRole } from "@/generated/prisma/client";
 import { signIn } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -46,11 +47,19 @@ export async function setupAdmin(formData: FormData) {
     redirect("/setup?error=exists");
   }
 
-  const result = await signIn("credentials", {
-    email,
-    password,
-    redirect: false,
-  });
+  let result: unknown;
+  try {
+    result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect("/login?error=invalid");
+    }
+    throw error;
+  }
 
   const url = typeof result === "string" ? result : "";
   if (!url || /[?&]error=/.test(url)) {

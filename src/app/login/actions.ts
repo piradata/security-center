@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 import { signIn } from "@/lib/auth";
 import {
   clearLoginFailures,
@@ -28,11 +29,20 @@ export async function login(formData: FormData) {
 
   // redirect: false lets us distinguish a failed sign-in from a successful
   // one, so the failure counter is only cleared after a valid login.
-  const result = await signIn("credentials", {
-    email,
-    password,
-    redirect: false,
-  });
+  let result: unknown;
+  try {
+    result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      recordLoginFailure(key);
+      redirect("/login?error=invalid");
+    }
+    throw error;
+  }
 
   const url = typeof result === "string" ? result : "";
   if (!url || /[?&]error=/.test(url)) {
