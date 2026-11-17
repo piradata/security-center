@@ -105,7 +105,7 @@ The `runner` image serves the app by default and runs the worker with `command: 
 1. Push to `main` and confirm the GHCR package exists.
 2. If the package is private, add `ghcr.io` registry credentials in Arcane.
 3. Create Arcane project **`security-center`** from [`arcane/compose.yaml`](arcane/compose.yaml).
-4. Add the project `.env` from [`arcane/.env.example`](arcane/.env.example), including `AUTH_URL=https://sechub.local.piradata.dev` and `APP_PORT=5377`.
+4. Add the project `.env` from [`arcane/.env.example`](arcane/.env.example), including `AUTH_URL=https://sechub.cloud.piradata.dev` and `APP_PORT=5377`.
 5. Deploy, then claim the admin at `/setup` immediately.
 6. Arcane auto-updates when `:latest` changes (`com.getarcaneapp.arcane.updater=true`). Pin a `:<sha>` tag to roll back.
 
@@ -113,9 +113,9 @@ Nginx Proxy Manager host:
 
 | Field | Value |
 |-------|-------|
-| Domain | `sechub.local.piradata.dev` |
+| Domain | `sechub.cloud.piradata.dev` |
 | Forward | `http://192.168.1.77:5377` |
-| SSL | existing `*.local.piradata.dev` wildcard |
+| SSL | existing `*.cloud.piradata.dev` wildcard (also covers the local alias) |
 | Extras | websockets on, block common exploits, force SSL |
 
 Add `client_max_body_size 50m;` in the Advanced tab for CI ingest payloads.
