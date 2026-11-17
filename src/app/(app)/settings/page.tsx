@@ -106,7 +106,7 @@ export default async function SettingsPage({
           <section className="space-y-4">
             <h2 className="text-lg font-semibold">Users</h2>
             <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-800">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[720px] text-sm">
                 <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
                   <tr>
                     <th className="px-3 py-2 font-medium">Email</th>

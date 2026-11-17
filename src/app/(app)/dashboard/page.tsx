@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CoverageBar } from "@/components/coverage-bar";
+import { ScoreBar } from "@/components/score-bar";
 import { IssueSeverity, IssueStatus } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { SCORE_WEIGHTS } from "@/lib/score-display";
 import { applicationScore, serviceScore } from "@/lib/scoring";
 
 const ACTIVE = [IssueStatus.open, IssueStatus.in_progress];
@@ -30,6 +33,17 @@ export default async function DashboardPage() {
             issues: {
               where: { status: { in: ACTIVE } },
               select: { severity: true, status: true },
+            },
+            scans: {
+              where: { coverageLine: { not: null } },
+              orderBy: { startedAt: "desc" },
+              take: 1,
+              select: {
+                coverageLine: true,
+                coverageBranch: true,
+                coverageFunction: true,
+                coverageSource: true,
+              },
             },
           },
         },
@@ -75,10 +89,21 @@ export default async function DashboardPage() {
     counts.map(({ severity, _count }) => [severity, _count]),
   );
   const scores = applications.map((application) => {
-    const services = application.services.map((service) => ({
-      ...service,
-      score: serviceScore(service.issues),
-    }));
+    const services = application.services.map((service) => {
+      const severityCounts = new Map<IssueSeverity, number>();
+      for (const issue of service.issues) {
+        severityCounts.set(
+          issue.severity,
+          (severityCounts.get(issue.severity) ?? 0) + 1,
+        );
+      }
+      return {
+        ...service,
+        score: serviceScore(service.issues),
+        severityCounts,
+        coverage: service.scans[0] ?? null,
+      };
+    });
     return {
       ...application,
       services,
@@ -134,18 +159,45 @@ export default async function DashboardPage() {
               key={application.id}
               className="rounded-lg border border-zinc-200 p-5 dark:border-zinc-800"
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <h3 className="font-semibold">{application.name}</h3>
-                <Score value={application.score} />
+                <div className="w-full sm:w-44">
+                  <ScoreBar value={application.score} label="Application" />
+                </div>
               </div>
+              <p className="mt-1 text-xs text-zinc-500">
+                Group score is the lowest service score.
+              </p>
               <ul className="mt-4 space-y-2">
                 {application.services.map((service) => (
                   <li
                     key={service.id}
-                    className="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-900"
+                    className="rounded-md bg-zinc-50 p-3 text-sm dark:bg-zinc-900"
                   >
-                    <span>{service.name}</span>
-                    <Score value={service.score} />
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="font-medium">{service.name}</span>
+                      <div className="w-full sm:w-36">
+                        <ScoreBar value={service.score} compact />
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <CoverageBar
+                        line={service.coverage?.coverageLine}
+                        branch={service.coverage?.coverageBranch}
+                        fn={service.coverage?.coverageFunction}
+                        compact
+                      />
+                      <span className="text-xs text-zinc-500">
+                        {SCORE_WEIGHTS.map(
+                          ({ label, weight }) =>
+                            `${label[0]}: ${
+                              service.severityCounts.get(
+                                label.toUpperCase() as IssueSeverity,
+                              ) ?? 0
+                            } (−${weight})`,
+                        ).join(" · ")}
+                      </span>
+                    </div>
                   </li>
                 ))}
                 {!application.services.length && (
@@ -158,6 +210,7 @@ export default async function DashboardPage() {
             <p className="text-sm text-zinc-500">No applications yet.</p>
           )}
         </div>
+        <ScoreLegend />
       </section>
 
       <section className="mt-8">
@@ -196,10 +249,26 @@ export default async function DashboardPage() {
   );
 }
 
-function Score({ value }: { value: number }) {
+function ScoreLegend() {
   return (
-    <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold tabular-nums dark:bg-zinc-800">
-      {value}
-    </span>
+    <details className="mt-4 rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+      <summary className="cursor-pointer font-medium">
+        How scores are calculated
+      </summary>
+      <div className="mt-3 space-y-2 text-zinc-600 dark:text-zinc-400">
+        <p>
+          Start at 100. Each open or in-progress issue subtracts its weight. The
+          application score is the lowest service score.
+        </p>
+        <ul className="flex flex-wrap gap-x-4 gap-y-1">
+          {SCORE_WEIGHTS.map(({ label, weight }) => (
+            <li key={label}>
+              {label} <span className="tabular-nums">−{weight}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs">Green: 90–100 · Amber: 70–89 · Red: below 70</p>
+      </div>
+    </details>
   );
 }

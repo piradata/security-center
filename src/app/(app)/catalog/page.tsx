@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { CoverageBar } from "@/components/coverage-bar";
+import { ScoreBar } from "@/components/score-bar";
 import { auth } from "@/lib/auth";
 import { effectiveToolConfig } from "@/lib/catalog";
 import { prisma } from "@/lib/db";
@@ -21,14 +23,6 @@ const secondaryButton =
 const dangerButton =
   "rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950";
 
-function Score({ value }: { value: number | null }) {
-  return (
-    <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium dark:bg-zinc-800">
-      Score {value ?? "not scanned"}
-    </span>
-  );
-}
-
 export default async function CatalogPage() {
   if (!(await auth())?.user) redirect("/login");
 
@@ -39,7 +33,20 @@ export default async function CatalogPage() {
         appToolConfigs: true,
         services: {
           orderBy: { name: "asc" },
-          include: { serviceToolConfigs: true },
+          include: {
+            serviceToolConfigs: true,
+            scans: {
+              where: { coverageLine: { not: null } },
+              orderBy: { startedAt: "desc" },
+              take: 1,
+              select: {
+                coverageLine: true,
+                coverageBranch: true,
+                coverageFunction: true,
+                coverageSource: true,
+              },
+            },
+          },
         },
       },
     }),
@@ -125,7 +132,9 @@ export default async function CatalogPage() {
                     </p>
                   )}
                 </div>
-                <Score value={application.score} />
+                <div className="w-full sm:w-44">
+                  <ScoreBar value={application.score} label="Application" />
+                </div>
               </div>
 
               <details className="mt-4">
@@ -251,7 +260,15 @@ export default async function CatalogPage() {
                               /{service.slug}
                             </p>
                           </div>
-                          <Score value={service.score} />
+                          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                            <div className="w-full sm:w-32">
+                              <ScoreBar value={service.score} compact />
+                            </div>
+                            <CoverageBar
+                              line={service.scans[0]?.coverageLine}
+                              compact
+                            />
+                          </div>
                         </div>
 
                         <details className="mt-3">

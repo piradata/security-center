@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { ScoreBar } from "@/components/score-bar";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
@@ -50,22 +51,23 @@ export default async function GatesPage() {
                     {application.services.length === 1 ? "" : "s"}
                   </p>
                 </div>
-                <span className="rounded-full bg-zinc-100 px-3 py-1 text-sm font-medium dark:bg-zinc-800">
-                  Group score: {score ?? "not scanned"}
-                </span>
+                <div className="w-full sm:w-48">
+                  <ScoreBar value={score} label="Group score" />
+                </div>
               </div>
 
               {application.services.length > 0 && (
                 <ul
-                  className="mt-4 flex flex-wrap gap-2"
+                  className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
                   aria-label="Service scores"
                 >
                   {application.services.map((service) => (
-                    <li
-                      key={service.id}
-                      className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs dark:border-zinc-800"
-                    >
-                      {service.name}: {service.score ?? "not scanned"}
+                    <li key={service.id}>
+                      <ScoreBar
+                        value={service.score}
+                        label={service.name}
+                        compact
+                      />
                     </li>
                   ))}
                 </ul>
@@ -89,6 +91,14 @@ export default async function GatesPage() {
                         <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
                           {scoreState}
                         </span>
+                      </div>
+                      <div className="mt-3 w-full sm:w-64">
+                        <ScoreBar
+                          value={score}
+                          label="Gate score"
+                          threshold={gate.scoreThreshold}
+                          compact
+                        />
                       </div>
                       <form
                         action={updateQualityGate.bind(null, gate.id)}

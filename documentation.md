@@ -108,6 +108,20 @@ curl -fsSL -H "Authorization: Bearer $SC_TOKEN" \
 
 Exit code of that step **is** the quality gate (0 = pass, non-zero = fail).
 
+### Code coverage upload
+
+Code coverage is **display-only** in V1 and does not affect the gate. After tests, a pipeline can upload a summary:
+
+```bash
+curl -fsSL -X POST \
+  -H "Authorization: Bearer $SC_TOKEN" \
+  -H 'Content-Type: application/json' \
+  "$SC_URL/api/v1/ci/coverage" \
+  -d '{"line":85.4,"branch":72.1,"function":90.0,"source":"vitest"}'
+```
+
+The endpoint is authenticated with the same service bearer token. Coverage attaches to the latest scan for the service and is shown on the dashboard and in the catalog.
+
 ### What `scan.sh` does internally
 
 ```mermaid

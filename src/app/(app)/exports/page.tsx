@@ -61,7 +61,7 @@ export default async function ExportsPage() {
       <section>
         <h2 className="mb-3 text-lg font-semibold">Recent exports</h2>
         <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
               <tr>
                 <th className="px-4 py-3 font-medium">Created</th>

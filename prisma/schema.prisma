@@ -151,6 +151,13 @@ model Scan {
   score      Int?
   metadata   Json?
 
+  /// Display-only code coverage, uploaded by the CI runner.
+  coverageLine     Float?
+  coverageBranch   Float?
+  coverageFunction Float?
+  coverageSource   String?
+  coverageAt       DateTime?
+
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   issues  Issue[]
 }

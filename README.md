@@ -91,6 +91,20 @@ curl -fsSL -H "Authorization: Bearer $SC_TOKEN" \
 
 Internally: probe → fetch enabled tools → install/run on the CI runner → ingest → quality gate (exit 0/1). Execution stays on the runner, never on the Security Center host.
 
+### Code coverage (display only)
+
+Coverage does not affect the quality gate. Upload a summary after your tests:
+
+```bash
+curl -fsSL -X POST \
+  -H "Authorization: Bearer $SC_TOKEN" \
+  -H 'Content-Type: application/json' \
+  "$SC_URL/api/v1/ci/coverage" \
+  -d '{"line":85.4,"branch":72.1,"function":90.0,"source":"vitest"}'
+```
+
+The upload attaches to the latest scan for that service. Line, branch, and function percentages appear on the dashboard and in the catalog.
+
 ## Deploy (GitHub → GHCR → Arcane → NPM)
 
 Pushes to `main` run lint/typecheck/tests and publish one image:
