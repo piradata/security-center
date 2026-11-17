@@ -180,12 +180,12 @@ export default async function DashboardPage() {
                         <ScoreBar value={service.score} compact />
                       </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <div className="mt-3 space-y-2">
                       <CoverageBar
                         line={service.coverage?.coverageLine}
                         branch={service.coverage?.coverageBranch}
                         fn={service.coverage?.coverageFunction}
-                        compact
+                        source={service.coverage?.coverageSource}
                       />
                       <span className="text-xs text-zinc-500">
                         {SCORE_WEIGHTS.map(
