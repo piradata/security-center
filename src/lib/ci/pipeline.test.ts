@@ -84,4 +84,6 @@ test("scan script is strict, cleans up, uses authenticated endpoints, and never 
   assert.match(script, /\$\{SC_TOKEN/);
   assert.doesNotMatch(script, /sc_[A-Za-z0-9_-]{43}/);
   assert.doesNotMatch(script, /\beval\b/);
+  assert.doesNotMatch(script, /__SC_/);
+  assert.ok(script.includes('"$tools_dir"/bin'));
 });

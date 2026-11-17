@@ -136,7 +136,18 @@ function renderRunnerCommand(command: ToolCommand) {
     [TOOLS]: '"$tools_dir"',
   };
   return command.argv
-    .map((argument) => variables[argument] ?? quoteShellArgument(argument))
+    .map((argument) => {
+      let rendered = argument;
+      let usedVariable = false;
+      for (const [placeholder, variable] of Object.entries(variables)) {
+        if (!rendered.includes(placeholder)) continue;
+        rendered = rendered.split(placeholder).join(variable);
+        usedVariable = true;
+      }
+      // Placeholders become quoted shell variables; surrounding literal text
+      // (for example `${toolsDir}/bin`) stays outside the quotes.
+      return usedVariable ? rendered : quoteShellArgument(argument);
+    })
     .join(" ");
 }
 
