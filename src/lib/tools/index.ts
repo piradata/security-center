@@ -517,7 +517,7 @@ export const semgrepAdapter: ToolAdapter = {
       `${toolsDir}/python/bin/semgrep`,
       "scan",
       "--config",
-      "auto",
+      "p/ci",
       "--metrics",
       "off",
       "--json",

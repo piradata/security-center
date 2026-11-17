@@ -86,4 +86,5 @@ test("scan script is strict, cleans up, uses authenticated endpoints, and never 
   assert.doesNotMatch(script, /\beval\b/);
   assert.doesNotMatch(script, /__SC_/);
   assert.ok(script.includes('"$tools_dir"/bin'));
+  assert.ok(script.includes("'p/ci'"));
 });
