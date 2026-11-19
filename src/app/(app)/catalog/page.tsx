@@ -1,27 +1,9 @@
+import { Key, Layers, Percent, Server } from "lucide-react";
 import { redirect } from "next/navigation";
-import { CoverageBar } from "@/components/coverage-bar";
-import { ScoreBar } from "@/components/score-bar";
+import { StatCard } from "@/components/ui/stat-card";
 import { auth } from "@/lib/auth";
-import { effectiveToolConfig } from "@/lib/catalog";
 import { prisma } from "@/lib/db";
-import {
-  createApplication,
-  deleteApplication,
-  deleteService,
-  revokeServiceToken,
-  updateApplication,
-  updateApplicationTool,
-  updateService,
-  updateServiceTool,
-} from "./actions";
-import { CreateServiceForm, RotateTokenForm } from "./token-controls";
-
-const input =
-  "w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700";
-const secondaryButton =
-  "rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800";
-const dangerButton =
-  "rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950";
+import { CatalogView } from "./catalog-view";
 
 export default async function CatalogPage() {
   if (!(await auth())?.user) redirect("/login");
@@ -53,382 +35,81 @@ export default async function CatalogPage() {
     prisma.tool.findMany({ orderBy: { name: "asc" } }),
   ]);
 
+  // Compute catalogue overview statistics
+  const totalApplications = applications.length;
+  let totalServices = 0;
+  let tokenedServices = 0;
+  let totalCoverage = 0;
+  let coverageCount = 0;
+
+  for (const app of applications) {
+    for (const svc of app.services) {
+      totalServices += 1;
+      if (svc.tokenHash) tokenedServices += 1;
+      if (
+        svc.scans[0]?.coverageLine !== null &&
+        svc.scans[0]?.coverageLine !== undefined
+      ) {
+        totalCoverage += svc.scans[0].coverageLine;
+        coverageCount += 1;
+      }
+    }
+  }
+
+  const avgCoverage =
+    coverageCount > 0 ? Math.round(totalCoverage / coverageCount) : null;
+  const tokenCoveragePercent =
+    totalServices > 0 ? Math.round((tokenedServices / totalServices) * 100) : 0;
+
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Page Title */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Catalog</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Manage applications, services, pipeline tokens, and effective tool
-          settings.
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
+          Software Catalogue
+        </h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Developer service directory, ownership mappings, pipeline credentials,
+          and scanner configuration.
         </p>
       </div>
 
-      <section className="mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
-        <h2 className="text-lg font-semibold">Add application</h2>
-        <form
-          action={createApplication}
-          className="mt-4 grid gap-3 md:grid-cols-2"
-        >
-          <label className="text-sm">
-            <span className="mb-1 block font-medium">Name</span>
-            <input required maxLength={120} name="name" className={input} />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block font-medium">Slug</span>
-            <input
-              required
-              maxLength={80}
-              pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              name="slug"
-              className={input}
-            />
-          </label>
-          <label className="text-sm md:col-span-2">
-            <span className="mb-1 block font-medium">Description</span>
-            <textarea
-              maxLength={500}
-              name="description"
-              rows={2}
-              className={input}
-            />
-          </label>
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              Create application
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <div className="mt-6 space-y-6">
-        {applications.length === 0 && (
-          <p className="rounded-lg border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 dark:border-zinc-700">
-            No applications yet.
-          </p>
-        )}
-
-        {applications.map((application) => {
-          const appDefaults = new Map(
-            application.appToolConfigs.map((config) => [
-              config.toolId,
-              config.enabled,
-            ]),
-          );
-          return (
-            <section
-              key={application.id}
-              className="rounded-lg border border-zinc-200 p-5 dark:border-zinc-800"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-semibold">{application.name}</h2>
-                  <p className="text-sm text-zinc-500">/{application.slug}</p>
-                  {application.description && (
-                    <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                      {application.description}
-                    </p>
-                  )}
-                </div>
-                <div className="w-full sm:w-44">
-                  <ScoreBar value={application.score} label="Application" />
-                </div>
-              </div>
-
-              <details className="mt-4">
-                <summary className="cursor-pointer text-sm font-medium">
-                  Edit application
-                </summary>
-                <form
-                  action={updateApplication.bind(null, application.id)}
-                  className="mt-3 grid gap-3 md:grid-cols-2"
-                >
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium">Name</span>
-                    <input
-                      required
-                      maxLength={120}
-                      name="name"
-                      defaultValue={application.name}
-                      className={input}
-                    />
-                  </label>
-                  <label className="text-sm">
-                    <span className="mb-1 block font-medium">Slug</span>
-                    <input
-                      required
-                      maxLength={80}
-                      pattern="[a-z0-9]+(-[a-z0-9]+)*"
-                      name="slug"
-                      defaultValue={application.slug}
-                      className={input}
-                    />
-                  </label>
-                  <label className="text-sm md:col-span-2">
-                    <span className="mb-1 block font-medium">Description</span>
-                    <textarea
-                      maxLength={500}
-                      name="description"
-                      rows={2}
-                      defaultValue={application.description ?? ""}
-                      className={input}
-                    />
-                  </label>
-                  <div className="flex gap-2 md:col-span-2">
-                    <button type="submit" className={secondaryButton}>
-                      Save application
-                    </button>
-                  </div>
-                </form>
-                <form
-                  action={deleteApplication.bind(null, application.id)}
-                  className="mt-3"
-                >
-                  <button type="submit" className={dangerButton}>
-                    Delete application and all services
-                  </button>
-                </form>
-              </details>
-
-              <div className="mt-6">
-                <h3 className="font-semibold">Application tool defaults</h3>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Services inherit these settings unless they define an
-                  override.
-                </p>
-                <div className="mt-3 grid gap-2 lg:grid-cols-2">
-                  {tools.map((tool) => (
-                    <form
-                      key={tool.id}
-                      action={updateApplicationTool.bind(
-                        null,
-                        application.id,
-                        tool.id,
-                      )}
-                      className="flex items-end gap-2 rounded-md bg-zinc-50 p-3 dark:bg-zinc-900"
-                    >
-                      <label className="min-w-0 flex-1 text-sm">
-                        <span className="mb-1 block font-medium">
-                          {tool.name}
-                        </span>
-                        <select
-                          name="enabled"
-                          defaultValue={String(
-                            appDefaults.get(tool.id) ?? true,
-                          )}
-                          className={input}
-                        >
-                          <option value="true">Enabled</option>
-                          <option value="false">Disabled</option>
-                        </select>
-                      </label>
-                      <button type="submit" className={secondaryButton}>
-                        Save
-                      </button>
-                    </form>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-7">
-                <h3 className="text-lg font-semibold">Services</h3>
-                <div className="mt-3 space-y-4">
-                  {application.services.map((service) => {
-                    const effective = effectiveToolConfig(
-                      tools,
-                      application.appToolConfigs,
-                      service.serviceToolConfigs,
-                    );
-                    const overrides = new Map(
-                      service.serviceToolConfigs.map((config) => [
-                        config.toolId,
-                        config.enabled,
-                      ]),
-                    );
-
-                    return (
-                      <article
-                        key={service.id}
-                        className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <h4 className="font-semibold">{service.name}</h4>
-                            <p className="text-xs text-zinc-500">
-                              /{service.slug}
-                            </p>
-                          </div>
-                          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                            <div className="w-full sm:w-32">
-                              <ScoreBar value={service.score} compact />
-                            </div>
-                            <CoverageBar
-                              line={service.scans[0]?.coverageLine}
-                              compact
-                            />
-                          </div>
-                        </div>
-
-                        <details className="mt-3">
-                          <summary className="cursor-pointer text-sm font-medium">
-                            Edit service
-                          </summary>
-                          <form
-                            action={updateService.bind(null, service.id)}
-                            className="mt-3 grid gap-3 sm:grid-cols-2"
-                          >
-                            <label className="text-sm">
-                              <span className="mb-1 block font-medium">
-                                Name
-                              </span>
-                              <input
-                                required
-                                maxLength={120}
-                                name="name"
-                                defaultValue={service.name}
-                                className={input}
-                              />
-                            </label>
-                            <label className="text-sm">
-                              <span className="mb-1 block font-medium">
-                                Slug
-                              </span>
-                              <input
-                                required
-                                maxLength={80}
-                                pattern="[a-z0-9]+(-[a-z0-9]+)*"
-                                name="slug"
-                                defaultValue={service.slug}
-                                className={input}
-                              />
-                            </label>
-                            <div className="sm:col-span-2">
-                              <button type="submit" className={secondaryButton}>
-                                Save service
-                              </button>
-                            </div>
-                          </form>
-                          <form
-                            action={deleteService.bind(null, service.id)}
-                            className="mt-3"
-                          >
-                            <button type="submit" className={dangerButton}>
-                              Delete service
-                            </button>
-                          </form>
-                        </details>
-
-                        <div className="mt-4 rounded-md bg-zinc-50 p-3 dark:bg-zinc-900">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <h5 className="text-sm font-medium">
-                                CI service token
-                              </h5>
-                              <p className="text-xs text-zinc-500">
-                                {service.tokenHash
-                                  ? "Active"
-                                  : "No active token"}
-                              </p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              <RotateTokenForm
-                                serviceId={service.id}
-                                hasToken={Boolean(service.tokenHash)}
-                              />
-                              {service.tokenHash && (
-                                <form
-                                  action={revokeServiceToken.bind(
-                                    null,
-                                    service.id,
-                                  )}
-                                >
-                                  <button
-                                    type="submit"
-                                    className={dangerButton}
-                                  >
-                                    Revoke token
-                                  </button>
-                                </form>
-                              )}
-                            </div>
-                          </div>
-                          <div className="mt-3">
-                            <p className="text-xs font-medium">
-                              Pipeline command
-                            </p>
-                            <code className="mt-1 block overflow-x-auto rounded bg-white p-2 font-mono text-xs whitespace-pre dark:bg-black">
-                              {`curl -fsSL -H "Authorization: Bearer $SC_TOKEN" "$SC_URL/api/v1/ci/scan.sh" | bash`}
-                            </code>
-                          </div>
-                        </div>
-
-                        <div className="mt-4">
-                          <h5 className="text-sm font-medium">
-                            Tool overrides
-                          </h5>
-                          <div className="mt-2 grid gap-2 lg:grid-cols-2">
-                            {effective.map((tool) => (
-                              <form
-                                key={tool.id}
-                                action={updateServiceTool.bind(
-                                  null,
-                                  service.id,
-                                  tool.id,
-                                )}
-                                className="flex items-end gap-2"
-                              >
-                                <label className="min-w-0 flex-1 text-sm">
-                                  <span className="mb-1 block">
-                                    {tool.name}{" "}
-                                    <span className="text-xs text-zinc-500">
-                                      (effective: {tool.enabled ? "on" : "off"})
-                                    </span>
-                                  </span>
-                                  <select
-                                    name="enabled"
-                                    defaultValue={
-                                      overrides.has(tool.id)
-                                        ? String(overrides.get(tool.id))
-                                        : "inherit"
-                                    }
-                                    className={input}
-                                  >
-                                    <option value="inherit">
-                                      Inherit application default
-                                    </option>
-                                    <option value="true">
-                                      Enabled override
-                                    </option>
-                                    <option value="false">
-                                      Disabled override
-                                    </option>
-                                  </select>
-                                </label>
-                                <button
-                                  type="submit"
-                                  className={secondaryButton}
-                                >
-                                  Save
-                                </button>
-                              </form>
-                            ))}
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
-                  {application.services.length === 0 && (
-                    <p className="text-sm text-zinc-500">No services yet.</p>
-                  )}
-                </div>
-                <CreateServiceForm applicationId={application.id} />
-              </div>
-            </section>
-          );
-        })}
+      {/* Catalogue Metrics Header */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Applications"
+          value={totalApplications}
+          subtext="Logical domain groups"
+          icon={Layers}
+        />
+        <StatCard
+          title="Total Services"
+          value={totalServices}
+          subtext="Catalogued microservices"
+          icon={Server}
+        />
+        <StatCard
+          title="CI Connected"
+          value={`${tokenCoveragePercent}%`}
+          subtext={`${tokenedServices} of ${totalServices} have active CI tokens`}
+          icon={Key}
+          tone={tokenCoveragePercent >= 80 ? "good" : "warn"}
+        />
+        <StatCard
+          title="Avg Line Coverage"
+          value={avgCoverage !== null ? `${avgCoverage}%` : "—"}
+          subtext={
+            coverageCount > 0
+              ? `Reported across ${coverageCount} services`
+              : "No coverage uploads yet"
+          }
+          icon={Percent}
+          tone="info"
+        />
       </div>
+
+      {/* Interactive Catalogue View (Search, Filters, Application & Service Cards) */}
+      <CatalogView applications={applications} tools={tools} />
     </div>
   );
 }

@@ -11,6 +11,15 @@ export function issueWhere(params: Pick<URLSearchParams, "get">) {
   const status = params.get("status");
   const where: Prisma.IssueWhereInput = {};
 
+  const q = params.get("q")?.trim() || params.get("search")?.trim();
+  if (q) {
+    where.OR = [
+      { title: { contains: q, mode: "insensitive" } },
+      { fingerprint: { contains: q, mode: "insensitive" } },
+      { description: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
   if (params.get("appId")) {
     where.service = { applicationId: params.get("appId")! };
   }
